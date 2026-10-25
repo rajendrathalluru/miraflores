@@ -10,6 +10,8 @@ export async function POST(request: Request) {
     const bucket = getLocalBucket();
     if (Number(request.headers.get('content-length') || 0) > 8_500_000) throw new HttpError(413, 'Choose a file smaller than 8 MB.');
     const form = await request.formData();
+    const expectedActor = form.get('actorId');
+    if (expectedActor !== null && expectedActor !== actor.id) throw new HttpError(409, 'The demo role changed. Review the active role before attaching evidence.');
     const file = form.get('file');
     const issueId = String(form.get('issueId') || '').slice(0,100) || null;
     const expectedRevision = Number(form.get('expectedRevision'));
@@ -22,11 +24,13 @@ export async function POST(request: Request) {
     const bytes = await file.arrayBuffer();
     const sha256 = Buffer.from(await crypto.subtle.digest('SHA-256', bytes)).toString('hex');
     await bucket.put(objectKey, bytes, { httpMetadata: { contentType: file.type } });
+    let revision: number;
     try {
-      await executeCommand(ownerId, actor.id, expectedRevision, { type: 'workflow', action: 'attach_evidence',
+      const workspace = await executeCommand(ownerId, actor.id, expectedRevision, { type: 'workflow', action: 'attach_evidence',
         payload: { id, name, contentType, size: file.size, issueId, sha256 } }, { id, name, contentType, size: file.size, issueId, objectKey });
+      revision = workspace.revision;
     } catch (e) { await bucket.delete(objectKey); throw e; }
-    return json({ id, name, size: file.size, issueId }, 201);
+    return json({ id, name, size: file.size, issueId, revision }, 201);
   } catch (e) { return failure(e); }
 }
 

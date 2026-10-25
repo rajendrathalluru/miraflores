@@ -6,7 +6,8 @@ export async function POST(request: Request) {
   try {
     const { ownerId, actor } = await requestContext(true);
     if (!actor.clearance || !['preparer', 'reviewer', 'partner', 'quality_reviewer'].includes(actor.role)) throw new HttpError(403, 'Only cleared tax staff can correct an identifier.');
-    const { expectedRevision, ref, value, reason } = await readBody(request);
+    const { expectedRevision, actorId, ref, value, reason } = await readBody(request);
+    if (actorId !== undefined && actorId !== actor.id) throw new HttpError(409, 'The demo role changed. Reopen the source before recording a protected correction.');
     if (typeof expectedRevision !== 'number' || !Number.isSafeInteger(expectedRevision) || expectedRevision < 0 || typeof ref !== 'string') throw new HttpError(400, 'Provide a valid source reference and expected workspace revision.');
     const prepared = await encryptCorrection(ownerId, actor.id, ref, value, reason);
     const workspace = await executeCommand(ownerId, actor.id, expectedRevision,

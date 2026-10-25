@@ -22,7 +22,8 @@ try {
   writeFileSync(join(output, 'package.json'), '{"type":"commonjs"}\n');
   run([compiler, 'scripts/test-domain.ts', 'scripts/test-agent.ts', 'scripts/test-records.ts',
     'scripts/test-acceptance.ts', 'scripts/test-workflow-acceptance.ts', 'scripts/test-package-acceptance.ts',
-    'scripts/test-checks-acceptance.ts', 'scripts/test-search-acceptance.ts', 'scripts/test-identifiers-acceptance.ts', 'tests/scripts/test-storage.ts', '--outDir', output,
+    'scripts/test-checks-acceptance.ts', 'scripts/test-search-acceptance.ts', 'scripts/test-identifiers-acceptance.ts',
+    'scripts/test-review-context.ts', 'scripts/test-export-manifest.ts', 'tests/scripts/test-storage.ts', '--outDir', output,
     '--module', 'commonjs', '--moduleResolution', 'node', '--target', 'es2022',
     '--esModuleInterop', '--resolveJsonModule', '--skipLibCheck', '--strict'], 'Compile domain, records, independent acceptance, investigation and private-storage tests');
   run([join(output, 'scripts/test-domain.js')], 'Run domain checks');
@@ -35,6 +36,8 @@ try {
   run([join(output, 'scripts/test-checks-acceptance.js')], 'Run independent source reconciliation acceptance');
   run([join(output, 'scripts/test-search-acceptance.js')], 'Run independent persisted-evidence search acceptance');
   run([join(output, 'scripts/test-identifiers-acceptance.js')], 'Run independent sensitive identifier acceptance');
+  run([join(output, 'scripts/test-review-context.js')], 'Run review context, concurrency and request receipt acceptance');
+  run([join(output, 'scripts/test-export-manifest.js')], 'Run revision-bound offline export manifest acceptance');
   console.log('\nAll checks passed. No external API requests were made.');
 } catch (error) {
   console.error(error instanceof Error ? error.message : 'Checks failed.');

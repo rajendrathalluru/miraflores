@@ -1,5 +1,5 @@
 /** Public, serializable contracts. This module never imports the source packet. */
-import type { WorkflowState } from './workflow-types';
+import type { Entry, WorkflowState } from './workflow-types';
 export type Role = 'preparer' | 'reviewer' | 'partner' | 'firm_administrator' | 'quality_reviewer' | 'client';
 export interface Actor { id: string; name: string; role: Role; clearance: boolean; activeFrom?: string }
 export type Scalar = string | number | boolean | null;
@@ -99,4 +99,53 @@ export interface TraceGraph {
   nodes: { id: string; type: 'line' | 'evidence' | 'rule'; label: string;
     value?: Scalar; line?: ReturnLine; evidence?: Evidence; text?: string }[];
   edges: { from: string; to: string; relation: 'input' | 'source' | 'rule' }[];
+}
+
+/** A single server-captured context. No raw packet or protected values enter this DTO. */
+export interface ReviewContextToken {
+  engagementId: string;
+  packetSha256: string;
+  engineVersion: string;
+  editRevision: number;
+  contentRevision: number;
+  cycle: number;
+  frozenParentId: string | null;
+  frozenContentHash: string | null;
+  replay: { at: string; eventId: string | null; readOnly: true } | null;
+}
+export interface ReviewChanges {
+  sinceRevision: number;
+  events: AuditEvent[];
+  changedRefs: string[];
+}
+export interface ReviewContext {
+  token: ReviewContextToken;
+  actor: Actor;
+  accessMode: 'local-evaluator-sandbox';
+  selection: { ref: string; label: string; kind: 'issue' | 'line' | 'evidence' };
+  issue: Issue | null;
+  evidence: Evidence[];
+  documents: DocumentDetail[];
+  computation: TraceGraph | null;
+  lines: ReturnLine[];
+  decisions: {
+    adjustments: Adjustment[];
+    lineAdjustments: Entry[];
+    investigations: Investigation[];
+    notes: ReviewNote[];
+    verifications: Entry[];
+    judgments: Entry[];
+    questions: Entry[];
+  };
+  checks: { id: string; title: string; status: string; method: string; detail: string; sourceRefs: string[]; lineKeys: string[]; engineValue: number | null; independentValue: number | null; delta: number | null; unit: string }[];
+  blockers: string[];
+  coverage: {
+    documents: { completed: number; total: number };
+    areas: { completed: number; total: number };
+    outsideFilings: { completed: number; total: number };
+    verifications: number;
+  };
+  permittedActions: string[];
+  changes: ReviewChanges;
+  disclaimer: string;
 }

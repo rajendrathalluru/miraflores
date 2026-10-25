@@ -3,9 +3,8 @@ import { getLocalDatabase } from '@/lib/database';
 import { actors, maskSensitiveText } from '@/lib/packet';
 import type { Actor } from '@/lib/contracts';
 
-export class HttpError extends Error {
-  constructor(public status: number, message: string) { super(message); }
-}
+import { HttpError } from './http-error';
+export { HttpError } from './http-error';
 
 export async function requestContext(write = false): Promise<{ ownerId: string; actor: Actor }> {
   const h = await headers();
@@ -35,6 +34,8 @@ export function runtimeConfig() {
     storage: 'SQLite (local)', files: 'Private local files',
     phase: 'Local development', sensitiveData: 'Masked',
     auth: 'Local development only',
+    accessMode: 'Fictional evaluator sandbox',
+    readPolicy: 'Demo personas share the masked case record. Role actions and sensitive access are enforced; personas are not verified human identities.',
   };
 }
 

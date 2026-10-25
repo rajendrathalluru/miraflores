@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000" role="img" aria-labelledby="title desc">
+  <title id="title">Proposed Miraflores review workspace</title>
+  <desc id="desc">Design specimen, not implemented UI. A selected mileage finding displays its simulated source document and exact field identity beside the extracted reading, supplied engine amount, independent arithmetic, and an unsaved human decision. Data comes from the fictional packet; interface layout and review state are proposed.</desc>
+  <defs><style>
+    text{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;fill:#1F3029;font-size:15px} .muted{fill:#4F6056}.micro{font-size:12px}.small{font-size:13px}.label{font-size:11px;font-weight:650;letter-spacing:1.5px;fill:#4F6056}.heading{font-size:25px;font-weight:650;letter-spacing:-.7px}.section{font-size:17px;font-weight:650}.bold{font-weight:650}.number{font-variant-numeric:tabular-nums;font-size:29px;font-weight:650;letter-spacing:-.8px}.white{fill:white}.green{fill:#245C45}.amber{fill:#8A4B08}.red{fill:#9F342B}.line{stroke:#D4DED5;stroke-width:1}.panel{fill:white;stroke:#D4DED5}.chip{fill:#EDF4EE;stroke:#D4DED5}.shadow{filter:url(#shadow)}
+  </style><filter id="shadow" x="-10%" y="-10%" width="120%" height="125%"><feDropShadow dx="0" dy="3" stdDeviation="5" flood-color="#1F3029" flood-opacity=".04"/></filter></defs>
+  <rect width="1600" height="1000" fill="#F6F7F3"/>
+  <rect width="172" height="1000" fill="#FFFFFF"/>
+  <line x1="172" y1="0" x2="172" y2="1000" class="line"/>
+  <g transform="translate(22 29)"><rect width="10" height="10" rx="2" fill="#245C45"/><rect x="14" width="10" height="10" rx="2" fill="#91AC92"/><rect y="14" width="10" height="10" rx="2" fill="#91AC92"/><rect x="14" y="14" width="10" height="10" rx="2" fill="#D4DED5"/><text x="36" y="16" font-size="21" font-weight="700">miraflores</text></g>
+  <text x="24" y="105" class="label">WORKPAPER</text>
+  <rect x="12" y="125" width="148" height="44" rx="7" fill="#EDF4EE"/>
+  <circle cx="32" cy="147" r="7" fill="none" stroke="#245C45" stroke-width="1.5"/><path d="m28 147 3 3 5-6" stroke="#245C45" fill="none"/>
+  <text x="49" y="152" class="bold green">Review</text>
+  <text x="24" y="207" class="muted">Return</text><text x="24" y="261" class="muted">Evidence</text><text x="24" y="315" class="muted">Team</text><text x="24" y="369" class="muted">Filing &amp; next year</text>
+  <line x1="24" y1="412" x2="148" y2="412" class="line"/>
+  <text x="24" y="448" class="label">QUICK ACCESS</text><text x="24" y="481" class="small muted">All tax records</text><text x="24" y="517" class="small muted">Season replay</text><text x="24" y="553" class="small muted">Firm standards</text>
+  <text x="24" y="875" class="small bold amber">Draft · not saved</text><text x="24" y="897" class="micro muted">Refresh status separate</text><text x="24" y="943" class="small muted">Settings and access</text>
+  <rect x="173" width="1427" height="76" fill="#FFFFFF"/>
+  <line x1="173" y1="76" x2="1600" y2="76" class="line"/>
+  <text x="202" y="43" class="bold">Okafor–Lindqvist</text><text x="365" y="43" class="muted">/</text><text x="389" y="43" class="small muted">2025 joint return</text>
+  <rect x="545" y="24" width="124" height="28" rx="5" class="chip"/><text x="559" y="43" class="small green">Supplied v3 ▾</text>
+  <rect x="690" y="24" width="111" height="28" rx="5" fill="#F8F0E2"/><text x="705" y="43" class="small amber">Draft review</text>
+  <text x="1048" y="43" class="small muted">Search workpaper</text><rect x="1193" y="26" width="35" height="25" rx="4" fill="#F6F7F3"/><text x="1201" y="43" class="micro muted">⌘K</text>
+  <line x1="1256" y1="22" x2="1256" y2="54" class="line"/><circle cx="1293" cy="38" r="17" fill="#EDECE4"/><text x="1283" y="43" class="micro">PR</text><text x="1321" y="34" class="small bold">Priya Raman</text><text x="1321" y="53" class="micro muted">Demo role · Preparer ▾</text>
+  <text x="202" y="118" class="label">REVIEW / BUSINESS</text><text x="202" y="155" class="heading">A number carries its proof.</text><text x="202" y="180" class="small muted">Context: engine version · edit/content revisions · cycle · frozen parent/hash</text>
+  <rect x="1115" y="112" width="460" height="66" rx="8" class="panel"/><text x="1133" y="136" class="micro muted">Coverage is separate from issue resolution</text><text x="1133" y="160" class="small bold">Documents</text><text x="1222" y="160" class="small muted">→ dispositions</text><text x="1350" y="160" class="small bold">Areas</text><text x="1396" y="160" class="small muted">→ conclusions</text>
+  <text x="202" y="212" class="micro amber">DESIGN SPECIMEN · PROPOSED INTERFACE · Fictional packet values, unsaved decision</text>
+  <!-- Queue -->
+  <rect x="194" y="232" width="270" height="669" rx="9" class="panel"/>
+  <text x="214" y="263" class="section">Review queue</text><text x="214" y="287" class="micro muted">Assigned to me · Open findings</text><line x1="194" y1="306" x2="464" y2="306" class="line"/>
+  <rect x="205" y="320" width="248" height="152" rx="6" fill="#EDF4EE" stroke="#8CA590"/>
+  <circle cx="225" cy="343" r="5" fill="#9F342B"/><text x="239" y="348" class="micro red bold">SOURCE DISAGREEMENT</text>
+  <text x="221" y="378" class="bold">A duplicate scan adds</text><text x="221" y="400" class="bold">3,700 business miles</text><text x="221" y="430" class="small muted">Business · D23 · 4 pages</text><text x="221" y="452" class="micro green">Decision open · Source selected</text>
+  <text x="215" y="511" class="small bold">RSU basis needs review</text><text x="215" y="535" class="micro muted">Wages &amp; investments</text><line x1="215" y1="556" x2="443" y2="556" class="line"/>
+  <text x="215" y="588" class="small bold">Payment year disagrees</text><text x="215" y="612" class="micro muted">Agency records &amp; payments</text><line x1="215" y1="633" x2="443" y2="633" class="line"/>
+  <text x="215" y="665" class="small bold">Crypto basis is unknown</text><text x="215" y="689" class="micro muted">Professional judgment required</text><line x1="215" y1="710" x2="443" y2="710" class="line"/>
+  <text x="215" y="753" class="small green bold">View all areas →</text><text x="215" y="777" class="micro muted">Not limited to curated findings</text>
+  <rect x="208" y="831" width="242" height="48" rx="5" fill="#F6F7F3"/><text x="221" y="852" class="micro muted">Bulk actions require a selection</text><text x="221" y="869" class="micro muted">and a reversible, audited preview.</text>
+  <!-- Evidence -->
+  <rect x="480" y="232" width="660" height="669" rx="9" class="panel"/>
+  <text x="503" y="263" class="section">Evidence &amp; computation</text><text x="503" y="286" class="micro muted">Stable field: D23 / page 3 / page_total / ev-0404</text><line x1="480" y1="306" x2="1140" y2="306" class="line"/>
+  <rect x="503" y="324" width="614" height="239" rx="6" fill="#FBFBF7" stroke="#D4DED5"/>
+  <text x="523" y="350" class="label">SIMULATED SOURCE DOCUMENT</text><text x="523" y="380" class="section">Vehicle mileage log 2025</text><text x="1088" y="350" text-anchor="end" class="micro muted">Page 3 of 4</text>
+  <line x1="523" y1="398" x2="1097" y2="398" class="line"/>
+  <rect x="521" y="414" width="578" height="48" rx="3" fill="#F4E8BC"/>
+  <text x="531" y="434" class="small">“Second scan of the May-Aug sheet – same handwriting</text><text x="531" y="453" class="small">and coffee stain as page 2.”</text>
+  <text x="523" y="492" class="small muted">Page total</text><text x="1097" y="495" text-anchor="end" class="bold">3,700 miles</text>
+  <text x="523" y="529" class="micro muted">Reflowed source excerpt · Approximate text highlight</text><text x="523" y="547" class="micro muted">Synthetic locator is not a verified boundary on an original page.</text>
+  <rect x="503" y="580" width="296" height="92" rx="6" fill="#F6F7F3"/>
+  <text x="520" y="604" class="label">EXTRACTED READING</text><text x="520" y="639" class="number">3,700<tspan class="small muted" dx="8">miles</tspan></text><text x="520" y="659" class="micro muted">96% confidence · Human check separate</text>
+  <rect x="815" y="580" width="302" height="92" rx="6" fill="#F6F7F3"/>
+  <text x="832" y="604" class="label">SUPPLIED V3 TOTAL</text><text x="832" y="639" class="number">11,800<tspan class="small muted" dx="8">miles</tspan></text><text x="832" y="659" class="micro muted">SchC.44a · Includes duplicate page</text>
+  <text x="503" y="706" class="label">INDEPENDENT SOURCE ARITHMETIC</text>
+  <text x="503" y="740" font-size="22" font-weight="650">2,600 + 3,700 + 1,800 = 8,100 miles</text><text x="503" y="765" class="small muted">Unique sheets: pages 1, 2 and 4. Page 3 repeats page 2.</text>
+  <line x1="503" y1="784" x2="1117" y2="784" class="line"/><text x="503" y="813" class="small green bold">Source fields → supplied rule → return destination</text><text x="503" y="840" class="small muted">All destinations · Related year · Prior preparer · Change history</text><text x="503" y="873" class="micro muted">Every link retains the selected version and review context.</text>
+  <!-- Human decision -->
+  <rect x="1156" y="232" width="420" height="669" rx="9" class="panel"/>
+  <text x="1178" y="263" class="section">Human decision</text><text x="1178" y="287" class="micro muted">Unsaved proposal · Original preserved</text><line x1="1156" y1="306" x2="1576" y2="306" class="line"/>
+  <text x="1178" y="338" class="small bold">Verification method</text><rect x="1178" y="350" width="375" height="40" rx="5" fill="#FFFFFF" stroke="#BBCBBF"/><text x="1190" y="375" class="small">Agreed to source document ▾</text>
+  <text x="1178" y="423" class="small bold">Conclusion and evidence</text><rect x="1178" y="436" width="375" height="115" rx="5" fill="#FFFFFF" stroke="#BBCBBF"/><text x="1190" y="461" class="small muted">Page 3 repeats the May-Aug sheet.</text><text x="1190" y="484" class="small muted">Retain it as evidence, exclude its total,</text><text x="1190" y="507" class="small muted">and use the three unique page totals.</text><text x="1190" y="532" class="micro muted">Proposed rationale, not a saved conclusion</text>
+  <text x="1178" y="583" class="label">SEPARATE REVIEWED OVERLAY</text><text x="1178" y="618" class="number">11,800<tspan class="muted" dx="11">→</tspan><tspan class="green" dx="11">8,100</tspan></text><text x="1178" y="642" class="small muted">Business miles · No engine rerun</text>
+  <rect x="1178" y="662" width="375" height="68" rx="5" fill="#FBF4E7"/><text x="1191" y="686" class="small amber bold">Tax effects remain separate estimates</text><text x="1191" y="709" class="micro amber">Supplied alternatives are not combined into final tax.</text>
+  <rect x="1178" y="755" width="375" height="44" rx="6" fill="#245C45"/><text x="1365" y="782" text-anchor="middle" class="white bold">Save decision &amp; preserve original</text>
+  <text x="1178" y="829" class="small green">Ask a question</text><text x="1374" y="829" class="small green">Add blocking note</text><line x1="1178" y1="847" x2="1553" y2="847" class="line"/><text x="1178" y="873" class="micro muted">Material changes reopen revision-bound approvals.</text>
+  <text x="194" y="941" class="micro muted">PROPOSED DESIGN · Source → extracted claim → supplied computation → attributable decision</text><text x="194" y="963" class="micro muted">Not an application screenshot. Fictional packet values. Trusted evaluator access is separate from the selectable demo persona.</text>
+</svg>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { AlertCircle, ArrowRight, ChevronLeft, ChevronRight, FileText, Link2 } from "lucide-react";
 import { Badge, Dialog, Loading, RecordData, money } from "./workpaper-ui";
 
@@ -43,7 +43,7 @@ function Printed({ content, range }: { content: unknown; range?: [number, number
   return <div className="printed-fields">{Object.entries(content as RecordData).map(([key, value]) => <div className="printed-item" key={key}><div className="printed-label">{key.replaceAll("_", " ")}</div>{typeof value === "object" && value !== null ? <Printed content={value}/> : <div className="printed-value">{String(value ?? "—")}</div>}</div>)}</div>;
 }
 
-function SensitiveField({ field, revision, canCorrect }: { field: RecordData; revision: number; canCorrect: boolean }) {
+function SensitiveField({ field, revision, canCorrect, actorId }: { field: RecordData; revision: number; canCorrect: boolean; actorId?: string }) {
   const [revealed, setRevealed] = useState<RecordData | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -51,19 +51,26 @@ function SensitiveField({ field, revision, canCorrect }: { field: RecordData; re
   const [reason, setReason] = useState("");
   const [currentRevision, setCurrentRevision] = useState(revision);
   const controller = useRef<AbortController | null>(null);
-  function hide() {
+  const hide = useCallback(() => {
     controller.current?.abort(); setRevealed(null); setValue(""); setReason(""); setBusy(false);
-  }
-  useEffect(() => {
-    const clear = () => { if (document.visibilityState === "hidden") { controller.current?.abort(); setRevealed(null); setValue(""); setReason(""); setBusy(false); } };
-    document.addEventListener("visibilitychange", clear);
-    return () => { document.removeEventListener("visibilitychange", clear); controller.current?.abort(); };
   }, []);
   useEffect(() => {
+    const clear = () => { if (document.visibilityState === "hidden") hide(); };
+    document.addEventListener("visibilitychange", clear);
+    window.addEventListener("pagehide", hide);
+    window.addEventListener("workpaper:access-change", hide);
+    return () => { document.removeEventListener("visibilitychange", clear); window.removeEventListener("pagehide", hide); window.removeEventListener("workpaper:access-change", hide); controller.current?.abort(); };
+  }, [hide]);
+  useEffect(() => {
     if (!revealed) return;
-    const timer = setTimeout(() => { setRevealed(null); setValue(""); setReason(""); }, 60000);
+    const timer = setTimeout(hide, 60000);
     return () => clearTimeout(timer);
-  }, [revealed]);
+  }, [revealed, hide]);
+  useEffect(() => {
+    if (!value && !reason) return;
+    const timer = setTimeout(hide, 60000);
+    return () => clearTimeout(timer);
+  }, [value, reason, hide]);
   async function reveal() {
     controller.current?.abort(); const request = new AbortController(); controller.current = request;
     setBusy(true); setMessage("");
@@ -72,7 +79,7 @@ function SensitiveField({ field, revision, canCorrect }: { field: RecordData; re
       const result: RecordData = await response.json();
       if (!response.ok) throw new Error(result.error || "The sensitive source could not be revealed.");
       if (!request.signal.aborted) setRevealed(result);
-    } catch (cause) { if (!request.signal.aborted) setMessage(cause instanceof Error ? cause.message : "The sensitive source could not be revealed."); }
+    } catch { if (!request.signal.aborted) { setRevealed(null); setValue(""); setReason(""); setMessage("The sensitive source could not be revealed. Reopen it with an authorized role."); } }
     finally { if (!request.signal.aborted) setBusy(false); }
   }
   async function correct() {
@@ -80,21 +87,29 @@ function SensitiveField({ field, revision, canCorrect }: { field: RecordData; re
     setBusy(true); setMessage("");
     try {
       const response = await fetch("/api/identifier-corrections", { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ expectedRevision: currentRevision, ref: field.id, value, reason }), signal: request.signal });
+        body: JSON.stringify({ expectedRevision: currentRevision, actorId, ref: field.id, value, reason }), signal: request.signal });
       const result: RecordData = await response.json();
-      if (!response.ok) throw new Error(response.status === 409 ? "The workspace changed. Close and reopen this source before recording the correction." : result.error || "The protected correction could not be saved.");
-      if (!request.signal.aborted) { setCurrentRevision(result.revision); setRevealed(null); setValue(""); setReason(""); setMessage("Encrypted correction saved. The source packet is unchanged and prior approvals reopen. Use Reveal to inspect the protected value."); }
-    } catch (cause) { if (!request.signal.aborted) setMessage(cause instanceof Error ? cause.message : "The protected correction could not be saved."); }
+      if (!response.ok) {
+        setRevealed(null); setValue(""); setReason("");
+        setMessage(response.status === 409 ? "The workspace changed. Protected fields were cleared. Close and reopen this source, review current facts, then re-enter the correction." : "The protected correction was not confirmed. Fields were cleared; reopen the source and check its current correction before trying again.");
+        return;
+      }
+      if (!request.signal.aborted) {
+        setCurrentRevision(result.revision); setRevealed(null); setValue(""); setReason("");
+        setMessage("Encrypted correction saved. The source packet is unchanged and prior approvals reopen. Use Reveal to inspect the protected value.");
+        window.dispatchEvent(new Event("workpaper:committed"));
+      }
+    } catch { if (!request.signal.aborted) { setRevealed(null); setValue(""); setReason(""); setMessage("The correction outcome is unconfirmed. Protected fields were cleared. Reopen the source to inspect its current correction before trying again."); } }
     finally { if (!request.signal.aborted) setBusy(false); }
   }
-  return <div className="decision-form"><div className="flex-inline"><Badge tone="sand">Cleared staff · Logged access</Badge><button className="button button-secondary button-small" disabled={busy} onClick={() => revealed ? hide() : void reveal()}>{revealed ? "Hide sensitive source" : "Reveal sensitive source"}</button></div>
+  return <div className="decision-form" data-dirty={!!value || !!reason || undefined}><div className="flex-inline"><Badge tone="sand">Cleared staff · Logged access</Badge><button className="button button-secondary button-small" disabled={busy} onClick={() => revealed ? hide() : void reveal()}>{revealed ? "Hide sensitive source" : "Reveal sensitive source"}</button></div>
     {revealed && <div className="settings-info"><strong>Sensitive view · Automatically hidden after 60 seconds</strong><p>Pipeline reading: {String(revealed.field?.value ?? "Not provided")}</p>{revealed.correction && <p>Latest protected correction: {String(revealed.correction.value)}</p>}<pre className="evidence-reference-text">{String(revealed.printedContent || "")}</pre><button className="text-button" onClick={hide}>Hide now</button></div>}
-    {canCorrect && <><label className="form-label">Corrected identifier<input type="password" autoComplete="off" spellCheck={false} value={value} onChange={event => setValue(event.target.value)} placeholder="Enter the source-supported correction"/></label><label className="form-label">Correction reason and evidence<textarea rows={2} value={reason} onChange={event => setReason(event.target.value)} placeholder="Explain the source-backed correction without copying the identifier."/></label><button className="button button-secondary button-small" disabled={busy || !value.trim() || !reason.trim() || !Number.isSafeInteger(currentRevision)} onClick={() => void correct()}>Save encrypted correction</button><p className="small muted">The original remains unchanged. Only correction metadata enters the workpaper; the value is encrypted on this local server.</p></>}
+    {canCorrect && <><label className="form-label">Corrected identifier<input type="password" autoComplete="off" spellCheck={false} value={value} onChange={event => setValue(event.target.value)} placeholder="Enter the source-supported correction"/></label><label className="form-label">Correction reason and evidence<textarea rows={2} value={reason} onChange={event => setReason(event.target.value)} placeholder="Explain the source-backed correction without copying the identifier."/></label><button className="button button-secondary button-small" disabled={busy || !value.trim() || !reason.trim() || !Number.isSafeInteger(currentRevision)} onClick={() => void correct()}>Save encrypted correction</button><p className="small muted">Protected drafts clear on conflict, role change, dismissal or 60 seconds of inactivity. The original remains unchanged; only metadata enters the workpaper.</p></>}
     {message && <p className="small" role="status">{message}</p>}
   </div>;
 }
 
-function SourceLocation({ field, docId, onVerify, canReveal, revision }: { field: RecordData; docId: string; onVerify?: Verify; canReveal: boolean; revision: number }) {
+function SourceLocation({ field, docId, onVerify, canReveal, revision, accessKey, actorId }: { field: RecordData; docId: string; onVerify?: Verify; canReveal: boolean; revision: number; accessKey?: string; actorId?: string }) {
   const [method, setMethod] = useState(verificationMethods[0]);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -109,7 +124,7 @@ function SourceLocation({ field, docId, onVerify, canReveal, revision }: { field
     } catch (cause) { setMessage(cause instanceof Error ? cause.message : "Verification could not be saved."); }
     finally { setSaving(false); }
   }
-  return <div className="source-focus">
+  return <div className="source-focus" data-dirty={!!note.trim() || undefined}>
     <span className="source-focus-label"><FileText size={13}/> Selected source field</span>
     <strong>{field.label || field.field}</strong>
     <small>{docId} · Page {field.page} · {field.id} · Field: {field.field}</small>
@@ -117,19 +132,24 @@ function SourceLocation({ field, docId, onVerify, canReveal, revision }: { field
     <small>Extraction confidence: {Math.round((field.confidence || 0) * 100)}% · Human verification is separate.</small>
     <small>Supplied synthetic locator (normalized 0–1): x0 {coordinate("x0")}, y0 {coordinate("y0")}, x1 {coordinate("x1")}, y1 {coordinate("y1")}.</small>
     <small>The packet provides synthetic coordinates, not original page images. Document/page/field references identify the record; coordinates do not prove the reading is correct.</small>
-    {canReveal && (["ssn", "ein", "account_number"].includes(field.value_type) || field.field === "ip_pin") && <SensitiveField key={field.id} field={field} revision={revision} canCorrect={Boolean(onVerify)}/>}
+    {canReveal && (["ssn", "ein", "account_number"].includes(field.value_type) || field.field === "ip_pin") && <SensitiveField key={`${field.id}:${accessKey || actorId || "local"}`} field={field} revision={revision} canCorrect={Boolean(onVerify)} actorId={actorId}/>}
     {onVerify && <div className="decision-form"><label className="form-label">Verification method<select className="outcome-select" value={method} onChange={event => setMethod(event.target.value)}>{verificationMethods.map(value => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label><label className="form-label">Evidence reviewed and conclusion<textarea rows={2} value={note} onChange={event => setNote(event.target.value)} placeholder="Explain how you verified this field or documented a discrepancy."/></label><button className="button button-secondary button-small" disabled={saving || !note.trim()} onClick={() => void verify()}>{saving ? "Saving…" : "Record verification"}</button>{message && <p className="small" role="status">{message}</p>}</div>}
   </div>;
 }
 
-export default function SourceViewer({ docId, sourceRef, onClose, onVerify }: {
-  docId: string; sourceRef?: string; onClose: () => void; onVerify?: Verify;
+export default function SourceViewer({ docId, sourceRef, onClose, onVerify, accessKey, actorId }: {
+  docId: string; sourceRef?: string; onClose: () => void; onVerify?: Verify; accessKey?: string; actorId?: string;
 }) {
   const [data, setData] = useState<RecordData | null>(null);
   const [error, setError] = useState("");
   const [page, setPage] = useState(1);
   const [selected, setSelected] = useState(sourceRef || "");
   const [showOriginal, setShowOriginal] = useState(false);
+  const body = useRef<HTMLDivElement>(null);
+  function changeSourceSelection(change: () => void) {
+    if (body.current?.querySelector('[data-dirty="true"]') && !window.confirm('Discard unsaved source entries and change the selected page or field?')) return;
+    change();
+  }
   useEffect(() => {
     let alive = true;
     fetch(`/api/documents/${encodeURIComponent(docId)}`).then(async response => {
@@ -159,16 +179,16 @@ export default function SourceViewer({ docId, sourceRef, onClose, onVerify }: {
   const canPreview = ["application/pdf", "image/png", "image/jpeg"].includes(original?.contentType);
   return <Dialog title={doc?.title || `Source document ${docId}`} label={`Evidence / ${docId}`} wide onClose={onClose}>
     {error ? <div className="inline-error"><AlertCircle size={18}/>{error}</div> : !data ? <Loading text="Opening source evidence…"/> : <>
-      <div className="document-toolbar"><div className="flex-inline"><Badge tone="sage">{showOriginal && originalUrl && canPreview ? "Private original" : "Simulated source"}</Badge><span className="muted small">{showOriginal && originalUrl && canPreview ? "Uploaded source · Stable field references" : "Original printed content · Reflowed layout"}</span></div><div className="pagination"><button disabled={page <= 1} aria-label="Previous page" onClick={() => setPage(value => value - 1)}><ChevronLeft size={17}/></button><span>Page {page} of {pages.length || doc.pageCount}</span><button disabled={page >= pages.length} aria-label="Next page" onClick={() => setPage(value => value + 1)}><ChevronRight size={17}/></button></div></div>
+      <div className="document-toolbar"><div className="flex-inline"><Badge tone="sage">{showOriginal && originalUrl && canPreview ? "Private original" : "Simulated source"}</Badge><span className="muted small">{showOriginal && originalUrl && canPreview ? "Uploaded source · Stable field references" : "Original printed content · Reflowed layout"}</span></div><div className="pagination"><button disabled={page <= 1} aria-label="Previous page" onClick={() => changeSourceSelection(() => setPage(value => value - 1))}><ChevronLeft size={17}/></button><span>Page {page} of {pages.length || doc.pageCount}</span><button disabled={page >= pages.length} aria-label="Next page" onClick={() => changeSourceSelection(() => setPage(value => value + 1))}><ChevronRight size={17}/></button></div></div>
       {originalUrl && <div className="document-toolbar"><div><Badge tone="sand">Bound private original</Badge> <span className="small">{String(original.name || "Source attachment")}</span></div><div className="flex-inline">{canPreview && <button className="button button-secondary button-small" onClick={() => setShowOriginal(value => !value)}>{showOriginal ? "Show simulated page" : "View private original"}</button>}<a className="button button-secondary button-small" href={originalUrl} target="_blank" rel="noreferrer">Download original</a></div></div>}
-      <div className="document-body"><div className="document-paper"><div className="paper-header"><span>MIRAFLORES / SOURCE RECORD</span><span>{docId} · {page}</span></div><h3>{doc.title}</h3><div className="paper-rule"/>
-        {visibleChosen && <SourceLocation key={visibleChosen.id} field={visibleChosen} docId={docId} onVerify={onVerify} canReveal={data.canRevealIdentifiers === true} revision={data.revision}/>}
+      <div ref={body} className="document-body"><div className="document-paper"><div className="paper-header"><span>MIRAFLORES / SOURCE RECORD</span><span>{docId} · {page}</span></div><h3>{doc.title}</h3><div className="paper-rule"/>
+        {visibleChosen && <SourceLocation key={visibleChosen.id} field={visibleChosen} docId={docId} onVerify={onVerify} canReveal={data.canRevealIdentifiers === true} revision={data.revision} accessKey={accessKey} actorId={actorId}/>}
         {identifierDiscrepancy && <p className="settings-info" role="note">The case review flags a difference between this pipeline ID and the printed provider ID. Both remain masked here. Preserve the discrepancy and use an approved secure correction process.</p>}
         {excerpt.message && !showOriginal && <p className="settings-info" role="note">{excerpt.message}</p>}
         {showOriginal && originalUrl && canPreview ? <><p className="settings-info">Private original view. Access is clearance checked and logged. Stable document/page/field references are preserved, but the synthetic locator above does not identify a verified position on this uploaded file. Confirm the actual field and page when recording verification.</p><iframe key={`${originalId}-${page}`} title={`Private original for ${docId}, requested page ${page}`} src={`${originalUrl}?preview=1${original.contentType === "application/pdf" ? `#page=${page}` : ""}`} sandbox="" referrerPolicy="no-referrer" style={{ width: "100%", height: 650, border: "1px solid #dfe5d7", borderRadius: 4 }}/><a className="text-button" href={`${originalUrl}?preview=1${original.contentType === "application/pdf" ? `#page=${page}` : ""}`} target="_blank" rel="noreferrer">Open private original in a separate view</a></> : <Printed content={pageData?.printed_content} range={excerpt.range}/>}
         <div className="paper-footer">{showOriginal && originalUrl && canPreview ? `Bound private original · ${original.name || "Source attachment"}` : `Simulated document · Original source content preserved · ${doc.fileName}`}</div>
       </div><aside className="field-panel"><div className="field-panel-heading"><FileText size={15}/><h3>Fields on this page</h3><Badge>{values.length}</Badge></div><p className="small muted">Select a field for its stable reference and supplied locator. Pipeline readings can disagree with printed content.</p>
-        {values.length ? <div className="field-list">{values.map((value: RecordData) => <button key={value.id} className={`field-item ${selected === value.id ? "selected" : ""}`} onClick={() => setSelected(value.id)}><span>{value.label || value.field}</span><strong>{value.value_type === "money" ? money(value.value, 2) : String(value.value ?? "Not provided")}</strong><small>{value.id} <span>{Math.round((value.confidence || 0) * 100)}% extraction confidence</span></small></button>)}</div> : <div className="field-empty">No extracted fields. Review the printed content directly.</div>}
+        {values.length ? <div className="field-list">{values.map((value: RecordData) => <button key={value.id} className={`field-item ${selected === value.id ? "selected" : ""}`} onClick={() => { if (selected !== value.id) changeSourceSelection(() => setSelected(value.id)); }}><span>{value.label || value.field}</span><strong>{value.value_type === "money" ? money(value.value, 2) : String(value.value ?? "Not provided")}</strong><small>{value.id} <span>{Math.round((value.confidence || 0) * 100)}% extraction confidence</span></small></button>)}</div> : <div className="field-empty">No extracted fields. Review the printed content directly.</div>}
         <div className="document-uses"><div className="field-panel-heading"><Link2 size={14}/><h3>Return destinations</h3></div>{(data.uses || []).length ? (data.uses || []).map((use: string | RecordData, index: number) => <div key={index} className="use-item"><ArrowRight size={12}/>{typeof use === "string" ? use : `${use.version ? `${use.version.toUpperCase()} · ` : ""}${use.key || use.lineKey || use.label || "Return line"}`}</div>) : <p className="small muted">No direct return-line destination recorded. Record this document&apos;s disposition in completeness review; its supporting use must be considered separately.</p>}</div>
       </aside></div>
     </>}

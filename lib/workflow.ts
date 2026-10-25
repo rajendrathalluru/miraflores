@@ -265,6 +265,10 @@ export function applyWorkflow(state: Workspace, command: Command, actor: Actor):
     }
     case 'set_replay': {
       if (actor.role === 'client') throw new Error('Season replay is available to the firm team.');
+      if (p.eventId === null) {
+        w.replayAt = null; delete w.replayEventId;
+        detail = 'Left read-only season replay; current reviewed return unchanged'; break;
+      }
       const event = packet.timeline.find(e => e.id === p.eventId);
       if (!event) throw new Error('Choose a supplied season event.');
       w.replayAt = event.at; w.replayEventId = event.id;

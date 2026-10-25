@@ -47,3 +47,6 @@ yarn-error.log*
 
 /.wrangler/
 /.sites-runtime/
+
+# Isolated redesign acceptance build
+.next-redesign/

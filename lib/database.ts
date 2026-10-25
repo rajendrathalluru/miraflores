@@ -52,6 +52,16 @@ export class LocalDatabase {
       return results;
     } catch (error) { this.connection.exec('ROLLBACK'); throw error; }
   }
+  /** Capture related metadata at one SQLite read snapshot. All reads are synchronous;
+   * callers perform file I/O and rendering only after this transaction has ended. */
+  readSnapshot(statements: { sql: string; args: SQLInputValue[] }[]): Record<string, unknown>[][] {
+    this.connection.exec('BEGIN');
+    try {
+      const rows = statements.map(statement => this.connection.prepare(statement.sql).all(...statement.args) as Record<string, unknown>[]);
+      this.connection.exec('COMMIT');
+      return rows;
+    } catch (error) { this.connection.exec('ROLLBACK'); throw error; }
+  }
   close() { this.connection.close(); }
 }
 
