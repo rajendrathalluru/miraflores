@@ -63,8 +63,8 @@ export const issues: Issue[] = [
     lineKeys: ['SchB.1.6', 'F1040.2b'], taxEffect: estimate(124 * .348, 124 * .069, 'Uses rounded $124 income change and supplied FX; not an independently sourced exchange rate.'),
   },
   {
-    id: 'provider-identifier', title: 'A 99% confidence read transposes the provider’s ID', area: 'Credits', severity: 'medium', kind: 'check',
-    description: 'Little Sprouts’ printed EIN and ev-1045 differ by transposed digits, despite confidence 0.99. The same incorrect identifier reaches Form 2441. Compare the masked source and extraction; record a source-backed correction without exposing the full identifier.',
+    id: 'provider-identifier', title: 'A 97% confidence read transposes the provider’s ID', area: 'Credits', severity: 'medium', kind: 'check',
+    description: 'Little Sprouts’ printed EIN and ev-1045 differ by transposed digits, despite confidence 0.97. The same incorrect identifier reaches Form 2441. Compare the masked source and extraction; record a source-backed correction without exposing the full identifier.',
     original: null, proposed: null, unit: 'identifier verification', sourceRefs: ['ev-1045', 'doc:D62#page1'],
     lineKeys: ['F2441.1b'], taxEffect: { federal: 0, california: 0, method: 'Identity correction; no modeled tax effect. Full identifiers remain masked.' },
   },

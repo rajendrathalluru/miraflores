@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { applyCommand, initialWorkspace, unresolvedIssues } from '../lib/domain';
 import { getBootstrap, getDocument, getVersionLines, resolveSource, traceLine } from '../lib/packet';
 import { issues } from '../lib/issues';
-import type { Workspace } from '../lib/contracts';
+import type { Command, Workspace } from '../lib/contracts';
 
 const originalPath = '/Users/rajendrathalluru/Documents/miraflores/okafor_lindqvist_2025_packet.json';
 const packetPath = `${process.cwd()}/data/packet.json`;
@@ -42,7 +42,8 @@ assert.equal(state.adjustments[0].undoReason, 'Reopen for more evidence.');
 assert.equal(state.audit.length, 2);
 assert(unresolvedIssues(state).some(issue => issue.id === 'duplicate-interest'));
 
-state = applyCommand(state, { type: 'save_investigation', issueId: 'crypto-basis', body: 'Documented basis uncertainty and authority in the case record.', result: 'resolved' }, 'st-01');
+state = applyCommand(state, { type: 'save_investigation', issueId: 'crypto-basis', body: 'Documented basis uncertainty and authority in the case record.', result: 'resolved',
+  authority: 'Supplied packet basis rule; synthetic test conclusion only.', sourceRefs: ['ev-0918', 'ev-0919'] } as Command, 'st-01');
 assert(!unresolvedIssues(state).some(issue => issue.id === 'crypto-basis'));
 state = applyCommand(state, { type: 'save_investigation', issueId: 'crypto-basis', body: 'Contradictory evidence arrived; reopen.', result: 'open' }, 'st-01');
 assert(unresolvedIssues(state).some(issue => issue.id === 'crypto-basis'), 'The latest investigation must reopen a previously resolved issue.');
@@ -88,15 +89,24 @@ assert(trace.nodes.some(node => node.evidence?.documentId === 'D29'));
 assert(trace.edges.some(edge => edge.relation === 'input'));
 
 // Resolve the initial queue in an isolated scenario, then exercise the entire review gate.
-let ready: Workspace = initialWorkspace();
+// Isolate the original approval lifecycle tests from completeness/signature gates.
+// The separate independent workflow acceptance suite exercises every default gate
+// with all 74 document dispositions, all 13 tax areas, required due diligence,
+// outside-filing responsibilities and both client signatures.
+let ready: Workspace = applyCommand(initialWorkspace(), { type: 'workflow', action: 'set_standards', payload: {
+  requireAllDocuments: false, requireAllAreas: false, requireSignature: false,
+  requireDueDiligence: false, requireOutsideFilings: false,
+} }, 'st-05');
 for (const issue of issues) {
   if (issue.kind === 'adjustment') ready = applyCommand(ready, { type: 'accept_adjustment', issueId: issue.id, reason: 'Source evidence verified for this test scenario.' }, 'st-01');
-  else ready = applyCommand(ready, { type: 'save_investigation', issueId: issue.id, body: 'Test scenario judgment with source evidence and documented authority; not an assertion about real tax filing readiness.', result: 'resolved' }, 'st-01');
+  else ready = applyCommand(ready, { type: 'save_investigation', issueId: issue.id, body: 'Test scenario judgment with source evidence and documented authority; not an assertion about real tax filing readiness.', result: 'resolved',
+    authority: 'Supplied packet rule and cited case evidence; synthetic test scenario only.', sourceRefs: issue.sourceRefs } as Command, 'st-01');
 }
 assert.equal(unresolvedIssues(ready).length, 0);
 assert.throws(() => applyCommand(ready, { type: 'sign_off', level: 'reviewer' }, 'st-01'), /independent reviewer/);
 // A reviewer who authors a judgment cannot independently sign it off.
-const selfReview = applyCommand(ready, { type: 'save_investigation', issueId: 'crypto-basis', body: 'Reviewer authored substantive conclusion.', result: 'resolved' }, 'st-02');
+const selfReview = applyCommand(ready, { type: 'save_investigation', issueId: 'crypto-basis', body: 'Reviewer authored substantive conclusion.', result: 'resolved',
+  authority: 'Supplied packet basis rule; synthetic test scenario only.', sourceRefs: ['ev-0918', 'ev-0919'] } as Command, 'st-02');
 assert.throws(() => applyCommand(selfReview, { type: 'sign_off' }, 'st-02'), /work you prepared/);
 
 ready = applyCommand(ready, { type: 'sign_off' }, 'st-02');

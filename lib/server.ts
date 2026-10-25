@@ -1,6 +1,6 @@
 import { cookies, headers } from 'next/headers';
 import { getLocalDatabase } from '@/lib/database';
-import { actors } from '@/lib/packet';
+import { actors, maskSensitiveText } from '@/lib/packet';
 import type { Actor } from '@/lib/contracts';
 
 export class HttpError extends Error {
@@ -41,7 +41,7 @@ export function runtimeConfig() {
 export function failure(error: unknown) {
   const message = error instanceof Error ? error.message : 'The action could not be completed.';
   const status = error instanceof HttpError ? error.status : /revision|stale|conflict/i.test(message) ? 409 : 400;
-  return Response.json({ error: message }, { status, headers: { 'Cache-Control': 'no-store' } });
+  return Response.json({ error: maskSensitiveText(message) }, { status, headers: { 'Cache-Control': 'no-store' } });
 }
 
 export function json(value: unknown, status = 200) {

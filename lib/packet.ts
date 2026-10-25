@@ -124,6 +124,31 @@ function sourceDocumentId(ref: string): string | undefined {
   return /^doc:(D\d+)#page\d+$/.exec(ref)?.[1] ?? (documentIndex.has(ref) ? ref : undefined);
 }
 
+/** Include every downstream destination, rather than only the lines that cite a
+ * document directly. The supplied calculation graph is the source of this map;
+ * it does not claim an adjustment has been recomputed by the tax engine.
+ */
+function documentDestinations(version: RawVersion, documentId: string): ReturnLine[] {
+  const dependentLines = new Map<string, string[]>();
+  for (const line of version.lines) for (const input of line.inputs) {
+    const dependents = dependentLines.get(input) ?? [];
+    dependents.push(line.key);
+    dependentLines.set(input, dependents);
+  }
+  const destinations = new Set(version.lines
+    .filter(line => line.sources.some(ref => sourceDocumentId(ref) === documentId))
+    .map(line => line.key));
+  const pending = [...destinations];
+  for (let index = 0; index < pending.length; index++) {
+    for (const key of dependentLines.get(pending[index]) ?? []) {
+      if (destinations.has(key)) continue;
+      destinations.add(key);
+      pending.push(key);
+    }
+  }
+  return version.lines.filter(line => destinations.has(line.key));
+}
+
 export function getDocument(id: string, actorId: string, state?: Workspace): DocumentDetail {
   getActor(actorId);
   // The state argument binds this read to the caller's workspace/API snapshot. No state is
@@ -134,7 +159,7 @@ export function getDocument(id: string, actorId: string, state?: Workspace): Doc
   return {
     document: { ...metadata(document), pages: masked(document.pages) },
     values: packet.extracted_values.filter(value => value.document_id === id).map(safeValue),
-    uses: packet.return_versions.flatMap(version => version.lines.filter(line => line.sources.some(ref => sourceDocumentId(ref) === id)).map(line => ({
+    uses: packet.return_versions.flatMap(version => documentDestinations(version, id).map(line => ({
       version: version.version, key: line.key, label: maskSensitiveText(line.label), value: masked(line.value),
     }))),
   };
@@ -154,8 +179,11 @@ function evidenceText(value: unknown): string {
   return maskSensitiveText(typeof value === 'string' ? value : JSON.stringify(value, null, 2) ?? 'No source value found.');
 }
 
-export function resolveSource(ref: string, actorId = 'st-01', version = 'v3'): Evidence {
+export function resolveSource(ref: string, actorId = 'st-01', version = 'v3', state?: Workspace): Evidence {
   getActor(actorId);
+  const lineRef = /^line:(v[123]):(.+)$/.exec(ref);
+  const line = getVersion(lineRef?.[1] ?? version).lines.find(l => l.key === (lineRef?.[2] ?? ref));
+  if (line) return { ref, type: 'return_line', label: `${line.key} · ${maskSensitiveText(line.label)}`, value: masked(line.value), text: evidenceText(line) };
   const value = valueIndex.get(ref);
   if (value) {
     const safe = safeValue(value);
@@ -175,7 +203,9 @@ export function resolveSource(ref: string, actorId = 'st-01', version = 'v3'): E
   const clientRecord = clientCollections.flat().find(item => item.id === ref);
   if (clientRecord) return { ref, type: 'client_evidence', label: ref, text: evidenceText(clientRecord) };
   if (ref.startsWith('py:/')) return resolvedRecord(ref, 'prior_year', pointer(packet.prior_years, ref.slice(3)));
+  if (ref.startsWith('packet:/')) return resolvedRecord(ref, 'packet_record', pointer(packetJson, ref.slice(7)));
   if (ref.startsWith('agency:/')) return resolvedRecord(ref, 'agency_record', pointer(packet.tax_agency_records, ref.slice(7)));
+  if (ref.startsWith('ref:rule.')) return resolvedRecord(ref, 'rule', packet.engine_reference.rules[ref.slice(9)]);
   if (ref.startsWith('timeline:')) return resolvedRecord(ref, 'timeline', packet.timeline.find(item => item.id === ref.slice(9)));
   if (ref.startsWith('household:')) return resolvedRecord(ref, 'household', packet.household.people.find(item => item.id === ref.slice(10)));
   if (ref.startsWith('ref:param.')) return resolvedRecord(ref, 'parameter', dotPath(packet.engine_reference.parameters, ref.slice(10)));
@@ -185,6 +215,17 @@ export function resolveSource(ref: string, actorId = 'st-01', version = 'v3'): E
     const assets = pointer(packet.prior_years, '/asset_records');
     const found = current ?? (Array.isArray(assets) ? assets.find(item => item.asset_id === ref.slice(6)) : undefined);
     return resolvedRecord(ref, 'asset', found);
+  }
+  const local = /^local:(question|judgment|notice|attachment|link|note|plan|task|reconciliation|lineAdjustment|history):(.+)$/.exec(ref);
+  if (local) {
+    const collections: Record<string, string> = {
+      question: 'questions', judgment: 'judgments', notice: 'notices', attachment: 'attachments', link: 'links',
+      plan: 'plans', task: 'tasks', reconciliation: 'reconciliations', lineAdjustment: 'lineAdjustments', history: 'history',
+    };
+    const workpaper = (state as (Workspace & { workpaper?: Record<string, unknown> }) | undefined)?.workpaper;
+    const records = local[1] === 'note' ? state?.notes : workpaper?.[collections[local[1]]];
+    const record = Array.isArray(records) ? records.find(item => item && typeof item === 'object' && item.id === local[2]) : undefined;
+    return resolvedRecord(ref, `local_${local[1]}`, record);
   }
   return { ref, type: 'unresolved', label: ref, text: 'No matching supplied evidence was found.', missing: true };
 }
@@ -199,8 +240,11 @@ export function getVersionLines(version = 'v3', actorId = 'st-01'): ReturnLine[]
 
 export function getBootstrap(actorId: string, workspace: Workspace): Bootstrap {
   const actor = getActor(actorId);
-  const resolved = (issueId: string) => workspace.adjustments.some(item => item.issueId === issueId && item.status === 'active') ||
-    (issues.find(issue => issue.id === issueId)?.kind !== 'adjustment' && [...workspace.investigations].reverse().find(item => item.issueId === issueId)?.result === 'resolved');
+  const resolved = (issueId: string) => {
+    const latest = [...workspace.investigations].reverse().find(item => item.issueId === issueId);
+    return workspace.adjustments.some(item => item.issueId === issueId && item.status === 'active') ||
+      (issues.find(issue => issue.id === issueId)?.kind !== 'adjustment' && latest?.result === 'resolved' && latest.authority?.trim());
+  };
   const sourceIndex: Bootstrap['sourceIndex'] = {};
   for (const value of packet.extracted_values) sourceIndex[value.id] = {
     documentId: value.document_id, page: value.page, field: value.field, label: maskSensitiveText(value.label),

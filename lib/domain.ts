@@ -1,14 +1,18 @@
 import { getActor, maskSensitiveText } from './packet';
 import { getIssue, issues } from './issues';
 import type { Actor, AuditEvent, Command, Signoff, Workspace } from './contracts';
+import { applyWorkflow, currentFrozen, workflowBlockers, workflowState } from './workflow';
 
 export function initialWorkspace(): Workspace {
   return { revision: 0, adjustments: [], notes: [], signoffs: [], audit: [], filings: [], questions: [], investigations: [] };
 }
 
 export function unresolvedIssues(state: Workspace) {
-  return issues.filter(issue => !state.adjustments.some(item => item.issueId === issue.id && item.status === 'active') &&
-    !(issue.kind !== 'adjustment' && [...state.investigations].reverse().find(item => item.issueId === issue.id)?.result === 'resolved'));
+  return issues.filter(issue => {
+    const latest = [...state.investigations].reverse().find(item => item.issueId === issue.id);
+    return !state.adjustments.some(item => item.issueId === issue.id && item.status === 'active') &&
+      !(issue.kind !== 'adjustment' && latest?.result === 'resolved' && latest.authority?.trim());
+  });
 }
 
 const staffRoles = ['preparer', 'reviewer', 'partner', 'quality_reviewer'];
@@ -34,6 +38,9 @@ function preparedBy(state: Workspace): Set<string> {
   return new Set([
     ...state.adjustments.map(item => item.actorId),
     ...state.investigations.filter(item => item.result === 'resolved').map(item => item.actorId),
+    ...(state.workpaper?.judgments ?? []).map(item => item.actorId),
+    ...Object.values(state.workpaper?.dueDiligence ?? {}).map(item => item.actorId),
+    ...(state.workpaper?.identifierCorrections ?? []).map(item => item.actorId),
   ]);
 }
 function assertCanReview(actor: Actor, state: Workspace, level: Signoff['level']): void {
@@ -56,7 +63,8 @@ export function applyCommand(state: Workspace, command: Command, actorId: string
   if (command.expectedRevision !== undefined && command.expectedRevision !== state.revision) {
     throw new Error('This workspace changed in another session. Refresh before saving your decision.');
   }
-  if (state.filings.some(filing => filing.status === 'frozen') &&
+  if (command.type === 'workflow') return applyWorkflow(state, command, actor);
+  if (currentFrozen(state) &&
     command.type !== 'draft_question') {
     throw new Error('This filing snapshot is frozen. Create an amendment workflow before changing reviewed content.');
   }
@@ -75,6 +83,7 @@ export function applyCommand(state: Workspace, command: Command, actorId: string
       relatedIssue = issueId(command);
       const issue = getIssue(relatedIssue);
       if (issue.kind !== 'adjustment') throw new Error('This item requires an investigation and documented judgment, not an automatic numeric adjustment.');
+      if (workflowState(state).lineAdjustments.some(a => a.status === 'active' && issue.lineKeys.includes(String(a.lineKey)))) throw new Error('An active general line overlay overlaps this finding. Undo it before applying another treatment.');
       if (next.adjustments.some(item => item.issueId === issue.id && item.status === 'active')) throw new Error('This adjustment is already active. Undo it before accepting another decision.');
       const reason = requireText(command.reason, 'Explain why you are accepting this adjustment.');
       next.adjustments.push({ id, issueId: issue.id, actorId: actor.id, reason, createdAt: at,
@@ -118,7 +127,9 @@ export function applyCommand(state: Workspace, command: Command, actorId: string
       if (result === 'resolved' && getIssue(relatedIssue).kind === 'adjustment') {
         throw new Error('A numeric adjustment must be accepted by a preparer. An investigation alone cannot resolve it.');
       }
-      next.investigations.push({ id, actorId: actor.id, issueId: relatedIssue, body, result, createdAt: at });
+      const authority = result === 'resolved' ? requireText(command.authority, 'Record the authority relied on for this conclusion.') : undefined;
+      next.investigations.push({ id, actorId: actor.id, issueId: relatedIssue, body, result, createdAt: at,
+        ...(authority ? { authority, sourceRefs: [...getIssue(relatedIssue).sourceRefs] } : {}) });
       detail = `Saved investigation (${result}): ${body}`; targetId = id; material = true;
       break;
     }
@@ -137,6 +148,8 @@ export function applyCommand(state: Workspace, command: Command, actorId: string
       assertCanReview(actor, state, level);
       if (next.notes.some(note => note.status === 'open')) throw new Error('Resolve open review notes before signing off.');
       if (unresolvedIssues(next).some(issue => issue.severity === 'high')) throw new Error('Resolve high-priority issues before signing off.');
+      const completeness = workflowBlockers(next);
+      if (completeness.length) throw new Error(`Review is blocked: ${completeness.join(', ')}.`);
       if (next.signoffs.some(item => item.status === 'active' && item.level === level)) throw new Error(`An active ${level} sign-off already exists for this content.`);
       if (level === 'partner' && !next.signoffs.some(item => item.status === 'active' && item.level === 'reviewer')) throw new Error('Complete independent reviewer sign-off before partner sign-off.');
       if (level === 'client' && !next.signoffs.some(item => item.status === 'active' && item.level === 'partner')) throw new Error('Complete partner review before requesting client approval.');
@@ -148,18 +161,19 @@ export function applyCommand(state: Workspace, command: Command, actorId: string
     case 'freeze': {
       if (actor.role !== 'partner') throw new Error('Only the partner can freeze the filing snapshot.');
       const blockers: string[] = [];
+      blockers.push(...workflowBlockers(next, true));
       if (next.notes.some(note => note.status === 'open')) blockers.push('open review notes');
       if (unresolvedIssues(next).some(issue => issue.severity === 'high')) blockers.push('unresolved high-priority issues');
       for (const level of ['reviewer', 'partner', 'client'] as const) {
         if (!next.signoffs.some(item => item.status === 'active' && item.level === level && item.contentRevision === materialRevision(next))) blockers.push(`${level} approval`);
       }
       if (blockers.length) throw new Error(`Filing is blocked: ${blockers.join(', ')}.`);
-      next.filings.push({ id, actorId: actor.id, at, revision, status: 'frozen', version: 'v3',
+      next.filings.push({ id, actorId: actor.id, at, revision, status: 'frozen', version: 'v3', cycle: workflowState(next).cycle,
         adjustmentIds: next.adjustments.filter(item => item.status === 'active').map(item => item.id),
         signoffIds: next.signoffs.filter(item => item.status === 'active').map(item => item.id),
         packetSha256: 'ee01f8508bd2fd9854754b82fd9c4a055bdc55e2778a132002a25381c412ad19',
         snapshot: structuredClone({ revision: state.revision, adjustments: next.adjustments,
-          notes: next.notes, signoffs: next.signoffs, investigations: next.investigations }),
+          notes: next.notes, signoffs: next.signoffs, investigations: next.investigations, workpaper: workflowState(next) }),
         note: 'Immutable reviewed overlay on supplied v3. Tax effects remain estimates; no return was transmitted.' });
       detail = 'Frozen reviewed content and its approval IDs. No tax return was transmitted.'; targetId = id;
       break;

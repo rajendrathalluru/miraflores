@@ -1,4 +1,5 @@
 /** Public, serializable contracts. This module never imports the source packet. */
+import type { WorkflowState } from './workflow-types';
 export type Role = 'preparer' | 'reviewer' | 'partner' | 'firm_administrator' | 'quality_reviewer' | 'client';
 export interface Actor { id: string; name: string; role: Role; clearance: boolean; activeFrom?: string }
 export type Scalar = string | number | boolean | null;
@@ -41,25 +42,28 @@ export interface AuditEvent {
 export interface Filing {
   id: string; actorId: string; at: string; revision: number; status: 'frozen';
   version: string; adjustmentIds: string[]; signoffIds: string[]; note: string;
-  packetSha256: string; contentHash?: string;
+  packetSha256: string; contentHash?: string; cycle?: number;
   snapshot: { revision: number; adjustments: Adjustment[]; notes: ReviewNote[];
-    signoffs: Signoff[]; investigations: Investigation[] };
+    signoffs: Signoff[]; investigations: Investigation[]; workpaper?: WorkflowState };
 }
 export interface Question {
   id: string; actorId: string; issueId?: string; body: string; createdAt: string; status: 'draft';
 }
 export interface Investigation {
   id: string; actorId: string; issueId: string; body: string; result: string; createdAt: string;
+  authority?: string; sourceRefs?: string[];
 }
 export interface Workspace {
   revision: number; adjustments: Adjustment[]; notes: ReviewNote[]; signoffs: Signoff[];
   audit: AuditEvent[]; filings: Filing[]; questions: Question[]; investigations: Investigation[];
+  workpaper?: WorkflowState;
 }
 export interface Command {
   type: 'accept_adjustment' | 'undo_adjustment' | 'add_note' | 'resolve_note' | 'sign_off' |
-    'client_approve' | 'freeze' | 'draft_question' | 'save_investigation';
+    'client_approve' | 'freeze' | 'draft_question' | 'save_investigation' | 'workflow';
+  action?: string; payload?: Record<string, unknown>;
   issueId?: string; adjustmentId?: string; reason?: string; body?: string; noteId?: string;
-  text?: string; result?: string; level?: 'reviewer' | 'partner' | 'client';
+  text?: string; result?: string; authority?: string; level?: 'reviewer' | 'partner' | 'client';
   /** Optional optimistic concurrency guard; the API should also check database revision. */
   expectedRevision?: number;
 }

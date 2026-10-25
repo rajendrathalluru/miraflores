@@ -11,7 +11,7 @@ export const date = (value: unknown) => value ? new Intl.DateTimeFormat("en-US",
 export const shortRole = (role: string = "") => role.replaceAll("_", " ");
 export const initials = (name: string = "") => name.split(" ").map(x => x[0]).slice(0, 2).join("");
 export function activeAdjustments(workspace: RecordData = {}) { return (workspace.adjustments || []).filter((a: RecordData) => !a.reversedAt && !a.undoneAt && !a.undone && !["undone", "reversed"].includes(a.status)); }
-export function reviewed(issue: RecordData, workspace: RecordData = {}) { return !!accepted(issue,workspace) || (issue.kind !== "adjustment" && [...(workspace.investigations || [])].reverse().find((i:RecordData)=>i.issueId===issue.id)?.result === "resolved"); }
+export function reviewed(issue: RecordData, workspace: RecordData = {}) { const latest = [...(workspace.investigations || [])].reverse().find((i:RecordData)=>i.issueId===issue.id); return !!accepted(issue,workspace) || (issue.kind !== "adjustment" && latest?.result === "resolved" && !!latest.authority?.trim()); }
 export function accepted(issue: RecordData, workspace: RecordData = {}) { return activeAdjustments(workspace).find((a: RecordData) => a.issueId === issue.id || a.issue_id === issue.id); }
 export function IconButton({ children, label, onClick, className = "" }: { children: ReactNode; label: string; onClick: () => void; className?: string }) { return <button className={`icon-button ${className}`} title={label} aria-label={label} onClick={onClick}>{children}</button>; }
 export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: string }) { return <span className={`badge badge-${tone}`}>{children}</span>; }

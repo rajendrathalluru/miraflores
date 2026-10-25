@@ -9,7 +9,8 @@ export async function loadWorkspace(ownerId: string): Promise<Workspace> {
   return row ? JSON.parse(row.data) as Workspace : initialWorkspace();
 }
 
-export async function executeCommand(ownerId: string, actorId: string, expectedRevision: number, command: Command): Promise<Workspace> {
+export interface AttachmentInsert { id: string; name: string; objectKey: string; contentType: string; size: number; issueId: string | null }
+export async function executeCommand(ownerId: string, actorId: string, expectedRevision: number, command: Command, attachment?: AttachmentInsert, extraMutations: { sql: string; args: string[] }[] = []): Promise<Workspace> {
   if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0) throw new HttpError(400, 'An expected revision is required.');
   const db = database();
   const baseline = initialWorkspace();
@@ -25,8 +26,12 @@ export async function executeCommand(ownerId: string, actorId: string, expectedR
       filing.contentHash = [...new Uint8Array(digest)].map(n => n.toString(16).padStart(2, '0')).join('');
     }
   }
-  const result = await db.prepare('UPDATE workspaces SET revision = ?, data = ?, updated_at = ? WHERE owner_id = ? AND revision = ?')
-    .bind(next.revision, JSON.stringify(next), new Date().toISOString(), ownerId, expectedRevision).run();
-  if (result.meta.changes !== 1) throw new HttpError(409, 'This workspace changed while your action was being saved. Refresh before trying again.');
+  await db.batch([
+    { sql: 'UPDATE workspaces SET revision = ?, data = ?, updated_at = ? WHERE owner_id = ? AND revision = ?',
+      args: [next.revision, JSON.stringify(next), new Date().toISOString(), ownerId, expectedRevision], expectChanges: 1 },
+    ...(attachment ? [{ sql: 'INSERT INTO attachments (id, owner_id, name, object_key, content_type, size, issue_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+      args: [attachment.id, ownerId, attachment.name, attachment.objectKey, attachment.contentType, attachment.size, attachment.issueId, new Date().toISOString()] }] : []),
+    ...extraMutations,
+  ]);
   return next;
 }

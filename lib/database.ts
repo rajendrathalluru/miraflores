@@ -39,6 +39,19 @@ export class LocalDatabase {
     });
     return { ...withArgs([]), bind: (...args: SQLInputValue[]) => withArgs(args) };
   }
+  /** A short synchronous transaction keeps a workspace CAS and evidence metadata atomic. */
+  async batch(statements: { sql: string; args: SQLInputValue[]; expectChanges?: number }[]) {
+    this.connection.exec('BEGIN IMMEDIATE');
+    try {
+      const results = statements.map(s => {
+        const result = this.connection.prepare(s.sql).run(...s.args);
+        if (s.expectChanges !== undefined && Number(result.changes) !== s.expectChanges) throw new Error('Workspace revision conflict. Refresh before saving.');
+        return { meta: { changes: Number(result.changes) } };
+      });
+      this.connection.exec('COMMIT');
+      return results;
+    } catch (error) { this.connection.exec('ROLLBACK'); throw error; }
+  }
   close() { this.connection.close(); }
 }
 

@@ -38,3 +38,14 @@ export const sensitiveViews = sqliteTable('sensitive_views', {
   targetId: text('target_id').notNull(),
   viewedAt: text('viewed_at').notNull(),
 });
+
+export const identifierCorrections = sqliteTable('identifier_corrections', {
+  id: text('id').primaryKey(),
+  ownerId: text('owner_id').notNull(),
+  actorId: text('actor_id').notNull(),
+  ref: text('ref').notNull(),
+  ciphertext: text('ciphertext').notNull(),
+  iv: text('iv').notNull(),
+  tag: text('tag').notNull(),
+  createdAt: text('created_at').notNull(),
+});
