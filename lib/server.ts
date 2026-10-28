@@ -1,4 +1,3 @@
-import { hasWorkspaceAccess } from './access';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import {
@@ -21,7 +20,6 @@ import {
   type Row,
 } from './types';
 export function guard(req: NextRequest) {
-  if (!hasWorkspaceAccess(req)) throw new DomainError('Workspace access denied.', 403);
   if (!['GET', 'HEAD'].includes(req.method)) {
     const origin = req.headers.get('origin');
     if (

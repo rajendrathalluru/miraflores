@@ -5,8 +5,6 @@ services:
       - "127.0.0.1:${APP_PORT:-3000}:3000"
     environment:
       DATABASE_URL: ${DATABASE_URL:?Set DATABASE_URL in your deployment environment}
-      WORKPAPER_ACCESS_PASSWORD: ${WORKPAPER_ACCESS_PASSWORD:?Set a strong demo password}
-      WORKPAPER_ACCESS_USER: ${WORKPAPER_ACCESS_USER:-reviewer}
     restart: unless-stopped
     init: true
     security_opt:
