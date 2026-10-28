@@ -1,0 +1,23 @@
+# Errors and concerns surfaced
+
+The supplied architectural document is a design input, not tax authority. Its example document IDs, amounts and already-corrected errors were checked against the delivered packet. The latest version already counts the duplicated Halvorsen W-2 once. The active Meridian statement in v3 is **D31**, not D30. The app therefore computes findings from the selected packet/version instead of seeding a fixed eight-error checklist.
+
+## Independent checks implemented
+
+| Check                     | Evidence and result                                                                                                                                                                 | How the design surfaces it                                                                                                                                                                            |
+| ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Duplicate mileage sheet   | D23 page 3 explicitly says it is a second scan of page 2. Distinct page totals are 2,600 + 3,700 + 1,800 = 8,100 miles; the engine has 11,800. Exact duplicate-page total: ev-0404. | A source-reconciliation finding opens page 3, highlights 3,700 and proposes an 8,100-mile overlay. The supplied mileage rate is used as a conversion factor; the original engine line remains intact. |
+| Broker summary/detail gap | Active D31 extracted lot proceeds sum to $71,715 versus its $71,965 summary: a $250 gap. The unextracted pages remain available, including the unread final page.                   | Independent arithmetic compares extracted lot fields with the summary and links exact source IDs and unread pages. No unread-page extraction is invented.                                             |
+| Duplicate sweep interest  | SchB.1.1 and SchB.1.2 each report $1,840 Northlake sweep interest from distinct source documents (ev-0492 and ev-0538).                                                             | A cross-document candidate match requests payer/recipient/account review. Equal amounts alone are explicitly not proof; removal needs a supported human reason.                                       |
+| Identity mismatch         | Theo's entered organizer identifier differs from the identity document, ev-1080. Full values remain masked in the finding.                                                          | An identity-comparison blocker links the source. Cleared staff can reveal a protected extracted field for 15 seconds with a logged reason; no public alert includes the identifier.                   |
+| Low-confidence readings   | The cash gift read at 41% (ev-1049) and transferred crypto basis at 60% (ev-0919) require corroboration.                                                                            | Source-level findings distinguish extraction confidence from a recorded verification method.                                                                                                          |
+
+## Inherited engine diagnostics
+
+Missing crypto basis, California AMT not computed, outside FBAR/1099 responsibilities, due diligence, stock-option AMT carryforward, investment-sale questionnaire conflict and other supplied diagnostics are preserved and explicitly labeled as engine diagnostics, not independent discoveries.
+
+The tax/workpaper record views expose additional review subjects: supplemental RSU/ESPP basis, HVAC improvement versus repair, S-corporation distributions and missing historical basis, state wages versus the move-date paystub, estimated payments versus agency records, retirement basis and deduction/credit limits. These are available to inspect and document; the current automated runner does not claim independently to establish the correct tax treatment for each one. The supplied scenarios expose the HVAC alternative and its computed comparison without silently adopting it.
+
+## Review discipline
+
+Findings do not auto-correct a return. Verification, an overlay and a conclusion are distinct actions. A reviewer must record why an issue is concluded, and filing remains blocked by missing dispositions, reviews, standards, blocking notes and approvals. Professional completion of the household return is not claimed by a successful test run.
