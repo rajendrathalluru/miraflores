@@ -7,3 +7,7 @@ CREATE TABLE IF NOT EXISTS audit_events(id TEXT PRIMARY KEY,engagement_id TEXT R
 CREATE TABLE IF NOT EXISTS command_receipts(engagement_id TEXT NOT NULL,request_id TEXT NOT NULL,actor_id TEXT NOT NULL,fingerprint TEXT NOT NULL,revision INT NOT NULL,PRIMARY KEY(engagement_id,request_id));
 CREATE TABLE IF NOT EXISTS attachments(id TEXT PRIMARY KEY,engagement_id TEXT REFERENCES engagements(id),name TEXT NOT NULL,mime TEXT NOT NULL,content_hash TEXT NOT NULL,data_base64 TEXT NOT NULL,created_at TIMESTAMPTZ NOT NULL DEFAULT now());
 CREATE INDEX IF NOT EXISTS records_engagement ON review_records(engagement_id,kind);
+
+-- Audit follow-up: shared policy and complete private prior-review archives.
+CREATE TABLE IF NOT EXISTS firm_policies(id TEXT PRIMARY KEY, revision INT NOT NULL DEFAULT 0, rules JSONB NOT NULL, events JSONB NOT NULL DEFAULT '[]'::jsonb);
+CREATE TABLE IF NOT EXISTS handoff_archives(id TEXT PRIMARY KEY, engagement_id TEXT REFERENCES engagements(id), content_hash TEXT NOT NULL, payload JSONB NOT NULL);

@@ -1,0 +1,280 @@
+{
+  "findingsByVersion": {
+    "v1": [
+      {
+        "id": "duplicate-page-D23",
+        "title": "A duplicate scan adds 3,700 miles",
+        "independent": true
+      },
+      {
+        "id": "broker-gap-D30",
+        "title": "Broker detail does not reach the summary",
+        "independent": true
+      },
+      {
+        "id": "duplicate-interest-SchB.1.2",
+        "title": "The same sweep interest appears twice",
+        "independent": true
+      },
+      {
+        "id": "confidence-ev-0919",
+        "title": "A reading needs a second look",
+        "independent": true
+      },
+      {
+        "id": "confidence-ev-1049",
+        "title": "A reading needs a second look",
+        "independent": true
+      },
+      {
+        "id": "identity-theo",
+        "title": "Identity records disagree",
+        "independent": true
+      },
+      {
+        "id": "diagnostic-SCORP_BASIS_INCOMPLETE",
+        "title": "S corporation stock basis",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-DIGITAL_ASSET_BASIS_MISSING",
+        "title": "Transferred crypto has no substantiated basis",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-K1_EXPECTED_NOT_RECEIVED",
+        "title": "Schedule K-1 from Ridgeline Real Estate Fund III LP was reported in 2024 but has not been received for 2025.",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-AMT_CREDIT_CARRYFORWARD",
+        "title": "AMT arises from the incentive stock option exercise (a deferral item); a minimum tax credit carryforward to 2026 is expected (Form 8801 next year).",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-AOTC_PHASED_OUT",
+        "title": "American opportunity credit fully phased out by modified AGI.",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-FBAR_OUTSIDE_RETURN",
+        "title": "Foreign account maximum exceeds 10,000 USD",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-FORM_1099_FILING",
+        "title": "Schedule C",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-DUE_DILIGENCE_REQUIRED",
+        "title": "Form 8867 must be completed by the preparer for the child tax credit and credit for other dependents.",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-CA_AMT_NOT_COMPUTED",
+        "title": "California AMT (Schedule P 540NR) not computed",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-HOME_OFFICE_AREA_CHANGE",
+        "title": "Home office area (average 240 sq ft) differs from 2024 (300 sq ft).",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-QUESTIONNAIRE_SALES_CONFLICT",
+        "title": "Questionnaire answer",
+        "independent": false
+      }
+    ],
+    "v2": [
+      {
+        "id": "duplicate-page-D23",
+        "title": "A duplicate scan adds 3,700 miles",
+        "independent": true
+      },
+      {
+        "id": "broker-gap-D31",
+        "title": "Broker detail does not reach the summary",
+        "independent": true
+      },
+      {
+        "id": "duplicate-interest-SchB.1.2",
+        "title": "The same sweep interest appears twice",
+        "independent": true
+      },
+      {
+        "id": "confidence-ev-0919",
+        "title": "A reading needs a second look",
+        "independent": true
+      },
+      {
+        "id": "confidence-ev-1049",
+        "title": "A reading needs a second look",
+        "independent": true
+      },
+      {
+        "id": "identity-theo",
+        "title": "Identity records disagree",
+        "independent": true
+      },
+      {
+        "id": "diagnostic-SCORP_BASIS_INCOMPLETE",
+        "title": "S corporation stock basis",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-DIGITAL_ASSET_BASIS_MISSING",
+        "title": "Transferred crypto has no substantiated basis",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-K1_EXPECTED_NOT_RECEIVED",
+        "title": "Schedule K-1 from Ridgeline Real Estate Fund III LP was reported in 2024 but has not been received for 2025.",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-AMT_CREDIT_CARRYFORWARD",
+        "title": "AMT arises from the incentive stock option exercise (a deferral item); a minimum tax credit carryforward to 2026 is expected (Form 8801 next year).",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-AOTC_PHASED_OUT",
+        "title": "American opportunity credit fully phased out by modified AGI.",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-FBAR_OUTSIDE_RETURN",
+        "title": "Foreign account maximum exceeds 10,000 USD",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-FORM_1099_FILING",
+        "title": "Schedule C",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-DUE_DILIGENCE_REQUIRED",
+        "title": "Form 8867 must be completed by the preparer for the child tax credit and credit for other dependents.",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-CA_AMT_NOT_COMPUTED",
+        "title": "California AMT (Schedule P 540NR) not computed",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-HOME_OFFICE_AREA_CHANGE",
+        "title": "Home office area (average 240 sq ft) differs from 2024 (300 sq ft).",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-QUESTIONNAIRE_SALES_CONFLICT",
+        "title": "Questionnaire answer",
+        "independent": false
+      }
+    ],
+    "v3": [
+      {
+        "id": "duplicate-page-D23",
+        "title": "A duplicate scan adds 3,700 miles",
+        "independent": true
+      },
+      {
+        "id": "broker-gap-D31",
+        "title": "Broker detail does not reach the summary",
+        "independent": true
+      },
+      {
+        "id": "duplicate-interest-SchB.1.2",
+        "title": "The same sweep interest appears twice",
+        "independent": true
+      },
+      {
+        "id": "confidence-ev-0919",
+        "title": "A reading needs a second look",
+        "independent": true
+      },
+      {
+        "id": "confidence-ev-1049",
+        "title": "A reading needs a second look",
+        "independent": true
+      },
+      {
+        "id": "identity-theo",
+        "title": "Identity records disagree",
+        "independent": true
+      },
+      {
+        "id": "diagnostic-DIGITAL_ASSET_BASIS_MISSING",
+        "title": "Transferred crypto has no substantiated basis",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-AMT_CREDIT_CARRYFORWARD",
+        "title": "AMT arises from the incentive stock option exercise (a deferral item); a minimum tax credit carryforward to 2026 is expected (Form 8801 next year).",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-AOTC_PHASED_OUT",
+        "title": "American opportunity credit fully phased out by modified AGI.",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-FBAR_OUTSIDE_RETURN",
+        "title": "Foreign account maximum exceeds 10,000 USD",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-FORM_1099_FILING",
+        "title": "Schedule C",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-DUE_DILIGENCE_REQUIRED",
+        "title": "Form 8867 must be completed by the preparer for the child tax credit and credit for other dependents.",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-CA_AMT_NOT_COMPUTED",
+        "title": "California AMT (Schedule P 540NR) not computed",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-HOME_OFFICE_AREA_CHANGE",
+        "title": "Home office area (average 240 sq ft) differs from 2024 (300 sq ft).",
+        "independent": false
+      },
+      {
+        "id": "diagnostic-QUESTIONNAIRE_SALES_CONFLICT",
+        "title": "Questionnaire answer",
+        "independent": false
+      }
+    ]
+  },
+  "SchC.44a": {
+    "accepted": true,
+    "fed": -4071.6
+  },
+  "ev-0404": {
+    "accepted": false,
+    "error": "Choose a valid return line."
+  },
+  "asset:STU-PRINTER": {
+    "accepted": false,
+    "error": "Choose a valid return line."
+  },
+  "F1040.33": {
+    "accepted": true,
+    "fed": -27019.42
+  },
+  "paymentProbe": {
+    "inputIncrease": 100,
+    "federalBalanceDelta": 34.8,
+    "expectedFromPacketReadme": -100
+  },
+  "reverseTrace": {
+    "missingCount": 0,
+    "examples": []
+  }
+}

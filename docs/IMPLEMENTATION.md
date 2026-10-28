@@ -1,5 +1,7 @@
 # Implementation and verification — October 28, 2026
 
+This historical baseline verification record is supplemented by [the completed audit follow-up](COMPLETION_VERIFICATION.md). The shared Supabase adapter and public deployment have since been exercised; current code still needs redeployment after each change.
+
 This is a new implementation after the previous project was removed. The supplied design document informs the interface and dynamic architecture; the three-page assignment remains the functional brief. This record distinguishes implemented mechanisms from observed acceptance. It is not a blanket statement that every assignment clause has been individually accepted by a CPA.
 
 ## Implemented review journeys
@@ -16,7 +18,7 @@ This is a new implementation after the previous project was removed. The supplie
 | Firm / aftercare          | Persisted firm standards, time versus supplied budgets, scoped activity, global search, role-filtered exports with captured revision and original-byte integrity checks, next-year plans/notice-response records and a carryforward handoff.                                                                |
 | Dynamic ingestion         | Content-identified clients/years, schema validation, immutable raw packet, no fixed version labels/counts; independent saved engagements. New pipeline output creates a new baseline rather than overwriting a review.                                                                                      |
 | Persistence / concurrency | Embedded Postgres by default; remote Postgres/Supabase adapter; SQL transaction/CAS, atomic audit and command receipts, actor/payload binding, status reconciliation, explicit retry, poll/focus freshness, visible failures and stale-draft acknowledgment.                                                |
-| Data access               | Default masking, staff clearance for identifier reveals/original-file download, 15-second transient reveals, view/download/export logs, client/examiner response filtering, no public raw packet route, cross-origin mutation checks. Public demo access has no workspace login.                                              |
+| Data access               | Default masking, staff clearance for identifier reveals/original-file download, 15-second transient reveals, view/download/export logs, client/examiner response filtering, no public raw packet route, cross-origin mutation checks. Public demo access has no workspace login.                            |
 
 ## Checks actually executed
 

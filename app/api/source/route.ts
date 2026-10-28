@@ -39,6 +39,17 @@ export async function GET(req: NextRequest) {
       for (const l of ver.lines)
         for (const input of l.inputs || [])
           parents.set(input, [...(parents.get(input) || []), l.key]);
+      const sourceDocument = (r: string, seen = new Set<string>()): string[] => {
+        if (seen.has(r)) return [];
+        seen.add(r);
+        if (evDoc.has(r)) return [evDoc.get(r)!];
+        if (r.startsWith('asset:'))
+          return (
+            ver.assets.find((a: Row) => a.asset_id === r.slice(6).split('/')[0])?.sources || []
+          ).flatMap((x: string) => sourceDocument(x, seen));
+        const d = p.documents.find((d) => d.id === r || `doc:${d.id}` === r.split('#')[0]);
+        return d ? [d.id] : [];
+      };
       const direct = ver.lines
         .filter(
           (l: Row) =>
@@ -47,7 +58,7 @@ export async function GET(req: NextRequest) {
               (l.sources || []).some(
                 (r: string) =>
                   r === ref ||
-                  (resolved.kind === 'document' && evDoc.get(r) === (document?.id || ref)),
+                  (resolved.kind === 'document' && sourceDocument(r).includes(document?.id || ref)),
               )),
         )
         .map((l: Row) => l.key);
@@ -72,7 +83,9 @@ export async function GET(req: NextRequest) {
     return json(
       mask({
         resolved:
-          resolved.kind === 'line' ? resolved : { kind: resolved.kind, value: resolved.value },
+          resolved.kind === 'line'
+            ? resolved
+            : { kind: resolved.kind, value: resolved.value, field: resolved.field },
         nodes: t.nodes,
         references,
         document: available ? document : null,

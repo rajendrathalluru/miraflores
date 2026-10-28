@@ -101,6 +101,15 @@ export function project(p: Packet, s: WorkState, actor: Row) {
               filing: f.snapshot.filing,
             },
           })),
+          inherited: s.inherited
+            ? {
+                sourceEngagement: s.inherited.sourceEngagement,
+                sourceYear: s.inherited.sourceYear,
+                sourceRevision: s.inherited.sourceRevision,
+              }
+            : undefined,
+          firmPolicyEvents: [],
+          seenPolicy: {},
           threads: [],
           times: [],
           notifications: [],

@@ -27,7 +27,7 @@ The first run imports the delivered packet unchanged. An embedded Postgres datab
 - Immutable packets and content digests per engagement; relational adjustments, review records, audit events, private attachments, and idempotent command receipts.
 - Server-side role policies, masked default projections, client/examiner data separation, expected-revision compare-and-swap, explicit conflict acknowledgment, frozen snapshots and content-bound approvals.
 
-Read [the core idea and model](docs/CORE_IDEA.md), [errors and evidence](docs/ERRORS_FOUND.md), and [implementation/verification boundaries](docs/IMPLEMENTATION.md).
+The [submission package](docs/HAND_IN.md) includes a verified one-page PDF, error analysis and recording guide. Read [the core idea and model](docs/CORE_IDEA.md), [errors and evidence](docs/ERRORS_FOUND.md), and [implementation/verification boundaries](docs/IMPLEMENTATION.md).
 
 ## Import another client
 
@@ -69,3 +69,12 @@ No live AI service is called. AI assisted development; checks and tax-effect ari
 ## Deployment
 
 Docker and Compose configuration are included for Linux container hosts, with a native Vercel configuration as an alternative. See [deployment instructions](docs/DEPLOYMENT.md) for secrets, commands, health checks and platform limits.
+
+## Completed audit follow-up
+
+See [completion verification](docs/COMPLETION_VERIFICATION.md) for direct payment/credit effects, source/asset review edits, shared firm policy, unread changes, expanded independent checks, reconciliations, complete archive recovery/carryforward, and printable client/notice records. Extended API checks run only against disposable databases:
+
+```sh
+TEST_URL=http://127.0.0.1:3204 node tests/completion-api.mjs
+TEST_URL=http://127.0.0.1:3204 node tests/lifecycle-api.mjs
+```

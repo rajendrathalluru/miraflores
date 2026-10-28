@@ -3,6 +3,7 @@ import { load, persist } from '@/lib/db';
 import { actorFor, applyCommand, DomainError } from '@/lib/workflow';
 import { guard, getActor, project, failure } from '@/lib/server';
 import { mask, digest } from '@/lib/packet';
+import { makeHandoff } from '@/lib/handoff';
 export async function GET(req: NextRequest) {
   try {
     guard(req);
@@ -11,8 +12,14 @@ export async function GET(req: NextRequest) {
     );
     const a = await getActor(packet);
     const kind = req.nextUrl.searchParams.get('kind');
-    if (a.role === 'client' && kind === 'carryforward')
-      throw new DomainError('Staff handoff access required.', 403);
+    if (
+      kind === 'carryforward' &&
+      (!a.sensitive_data_clearance || ['client', 'examiner'].includes(a.role))
+    )
+      throw new DomainError(
+        'A cleared staff role is required to export the complete private archive.',
+        403,
+      );
     const projected = project(
       packet,
       state,
@@ -46,20 +53,18 @@ export async function GET(req: NextRequest) {
         });
         await persist(tx, row.id, rows[0].revision, logged);
       });
+    const priorArchive =
+      kind === 'carryforward' && state.inherited?.archiveId
+        ? (
+            await database.query(
+              'SELECT payload FROM handoff_archives WHERE id=$1 AND engagement_id=$2',
+              [state.inherited.archiveId, row.id],
+            )
+          ).rows[0]?.payload
+        : undefined;
     const content =
       kind === 'carryforward'
-        ? mask({
-            priorEngagement: row.id,
-            sourceRevision: state.revision,
-            packetHash: digest(packet),
-            household: projected.packet.household,
-            carryovers: packet.return_versions.at(-1)?.carryovers_out,
-            basis: packet.prior_years?.basis_records,
-            assets: packet.return_versions.at(-1)?.assets,
-            judgments: projected.state.judgments,
-            plans: projected.state.plans,
-            history: projected.state.audit,
-          })
+        ? makeHandoff(row.id, packet, state, files, priorArchive)
         : {
             format: 'miraflores-defense-record-1',
             exportedAt: new Date().toISOString(),

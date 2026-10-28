@@ -257,6 +257,7 @@ export default function Workspace() {
   const select = (ref: string, finding?: Row, sourceVersion?: string) => {
     if (selection?.ref !== ref && !confirmLeave()) return;
     if (sourceVersion) setVersionKey(sourceVersion);
+    setModal('');
     setSelection({ ref, finding });
     updateUrl(view, sourceVersion || versionKey, ref);
   };
@@ -281,6 +282,7 @@ export default function Workspace() {
       engagementId: d.id,
       actorId: d.actor.id,
       expectedRevision: cmd.expectedRevision ?? d.state.revision,
+      expectedPolicyRevision: d.state.firmPolicyRevision || 0,
       requestId: crypto.randomUUID(),
       command: {
         ...cmd,
@@ -595,7 +597,7 @@ export default function Workspace() {
             </div>
             <div className="sandbox-label">
               <LockKeyhole size={12} />
-              Local evaluator sandbox
+              Assignment demo
             </div>
             <button className="profile" onClick={() => setModal('about')}>
               <div className="avatar firm">M</div>
@@ -1445,6 +1447,9 @@ function ClientPortal({
           authorization as a simulation.
         </p>
       </div>
+      <a className="button" href={`/api/report?id=${data.id}&kind=client`}>
+        Download your printable review copy
+      </a>
       <div className="panel client-approval">
         <h2>Your approval is tied to this review.</h2>
         <p>

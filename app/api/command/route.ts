@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { db, load, persist } from '@/lib/db';
+import { db, load, persist, withFirmPolicy, saveFirmPolicy } from '@/lib/db';
 import { guard, getActor, json, failure } from '@/lib/server';
 import { applyCommand, DomainError } from '@/lib/workflow';
 import { digest } from '@/lib/packet';
@@ -17,6 +17,7 @@ export async function POST(req: NextRequest) {
     const fingerprint = digest({
       actor: actor.id,
       revision: b.expectedRevision,
+      policyRevision: b.expectedPolicyRevision,
       command: b.command,
     });
     const result = await database.transaction(async (tx) => {
@@ -38,7 +39,17 @@ export async function POST(req: NextRequest) {
           `A colleague saved revision ${rows[0].revision}. Your draft is retained; refresh and review before saving again.`,
           409,
         );
-      const s = applyCommand(rows[0].raw_packet, rows[0].state, actor, b.command);
+      const currentState = await withFirmPolicy(tx, rows[0].raw_packet, rows[0].state, true);
+      if (
+        b.expectedPolicyRevision !== undefined &&
+        b.expectedPolicyRevision !== currentState.firmPolicyRevision
+      )
+        throw new DomainError(
+          'Firm policy changed. Refresh and review your draft before saving.',
+          409,
+        );
+      const s = applyCommand(rows[0].raw_packet, currentState, actor, b.command);
+      if (b.command.type === 'standard') await saveFirmPolicy(tx, rows[0].raw_packet, s);
       await persist(tx, b.engagementId, rows[0].revision, s);
       await tx.query(
         'INSERT INTO command_receipts(engagement_id,request_id,actor_id,fingerprint,revision) VALUES($1,$2,$3,$4,$5)',

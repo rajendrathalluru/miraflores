@@ -12,8 +12,12 @@ The default unit of trust is a supported human conclusion, not an extraction con
 
 Every mutation validates role and expected revision on the server, then commits state, audit and receipt atomically. A stale edit retains its draft and requires explicit acknowledgment of the current context. An interrupted response can be reconciled before retrying the same request identity. Approvals bind to content hashes; changed material reopens review. Filing gates enforce completeness and approvals, and a frozen snapshot becomes the immutable parent of an amendment.
 
+Shared firm policy is versioned separately from engagement work. Complete handoff archives retain the original packet, review decisions and evidence bytes, while a genuine next-year packet starts new-year review with linked prior history.
+
 The local prototype uses embedded Postgres; a shared adapter supports server-side Supabase/Postgres without changing the review model. Default responses mask identifiers. Client and examiner projections omit internal workpaper conversations. The fictional role switcher demonstrates permissions and is deliberately not sold as authentication.
 
 ## Tradeoffs
 
 The implementation favors a complete local review loop over external integrations: no OCR, tax engine, live AI, email, legal e-signature or agency connection is claimed. Files remain linked by stable packet references so an original source can be attached without replacing the trace. A real hosted release still needs trusted identity, tenant policies, operational recovery, observed CPA/new-hire usability, and the applicant's own walkthrough video.
+
+The submission-ready, visually verified one-page version is [core-idea.pdf](../output/pdf/core-idea.pdf).

@@ -4804,3 +4804,220 @@ textarea::placeholder {
     white-space: nowrap;
   }
 }
+/* Source-backed review tools and complete handoff workflows. */
+.changes-banner {
+  display: flex;
+  gap: 20px;
+  justify-content: space-between;
+  align-items: center;
+  padding: 18px 20px;
+  margin-bottom: 24px;
+  border: 1px solid #bfd5df;
+  background: #edf4f9;
+  border-radius: 10px;
+}
+.changes-banner strong {
+  font-size: 0.9375rem;
+}
+.changes-banner p {
+  color: #435f70;
+  font-size: 0.8125rem;
+  margin-top: 4px;
+}
+.variance-summary {
+  margin: 18px 0;
+}
+.variance-summary summary {
+  font-size: 0.875rem;
+  cursor: pointer;
+  color: #604812;
+}
+.review-list {
+  display: grid;
+  gap: 12px;
+  margin: 18px 0;
+}
+.review-list .summary-line {
+  gap: 18px;
+  flex-wrap: wrap;
+}
+.review-list small {
+  display: block;
+}
+.activity-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin-bottom: 24px;
+}
+.activity-controls p {
+  flex-basis: 100%;
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.reconciliation {
+  display: grid;
+  gap: 20px;
+  margin-top: 24px;
+}
+.reconciliation-totals {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.reconciliation-totals > div,
+.reconciliation-totals > button {
+  padding: 18px;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 8px;
+  text-align: left;
+}
+.reconciliation-totals span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8125rem;
+}
+.reconciliation-totals strong {
+  display: block;
+  margin: 12px 0;
+  font-family: var(--mono);
+  font-size: 1.25rem;
+  letter-spacing: -0.04em;
+}
+.reconciliation table td {
+  max-width: 320px;
+}
+.source-correction {
+  margin-top: 20px;
+  padding: 16px;
+}
+.source-correction > p {
+  font-size: 0.8125rem;
+  margin: 10px 0;
+}
+.source-correction label,
+.handoff-panel label,
+.reconciliation > label {
+  display: grid;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 550;
+  margin: 16px 0;
+}
+.source-correction select {
+  width: 100%;
+}
+.handoff-panel {
+  display: grid;
+  gap: 16px;
+}
+.handoff-panel > p {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.handoff-panel input[type='file'] {
+  width: 100%;
+  background: white;
+}
+.inherited-review {
+  display: grid;
+  gap: 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.inherited-review details {
+  font-size: 0.875rem;
+}
+.inherited-review summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.inherited-review p,
+.inherited-review code {
+  overflow-wrap: anywhere;
+}
+.notice-response {
+  display: grid;
+  gap: 20px;
+}
+.notice-response article {
+  display: grid;
+  gap: 12px;
+}
+.prior-comparison {
+  margin: 24px 0;
+}
+.prior-comparison > p {
+  font-size: 0.875rem;
+  color: var(--muted);
+  margin: 12px 0;
+}
+.prior-comparison > .refs {
+  margin-bottom: 20px;
+}
+.prior-comparison td p {
+  font-size: 0.8125rem;
+  max-width: 220px;
+  white-space: normal;
+}
+@media (max-width: 1300px) {
+  .reconciliation-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .changes-banner {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 16px;
+    gap: 12px;
+  }
+  .reconciliation-totals {
+    grid-template-columns: 1fr;
+  }
+  .activity-controls .button {
+    flex: 1;
+    white-space: normal;
+  }
+  .review-list .summary-line {
+    align-items: flex-start;
+  }
+}
+.field-map {
+  margin: 14px 0;
+}
+.field-map summary {
+  cursor: pointer;
+  font-size: 0.8125rem;
+  color: var(--teal-dark);
+}
+.field-map-page {
+  margin-top: 12px;
+  position: relative;
+  aspect-ratio: 0.77;
+  background: repeating-linear-gradient(white, white 19px, #f0f3f4 20px);
+  border: 1px solid var(--line-strong);
+}
+.field-map-page > span {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+.field-map-page > div {
+  position: absolute;
+  background: #cee5bd99;
+  border: 2px solid #58813d;
+  min-height: 4px;
+}
+.asset-source-record {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font: 0.75rem/1.7 var(--mono);
+  max-height: 320px;
+  overflow: auto;
+}

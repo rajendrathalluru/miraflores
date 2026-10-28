@@ -1,5 +1,6 @@
 import type { Packet, Row, Finding } from './types';
 import { areaOf } from './types';
+import { additionalChecks } from './checks';
 export function inspectPacket(p: Packet, v: Row): Finding[] {
   const findings: Finding[] = [];
   const push = (x: Finding) => findings.push(x);
@@ -150,5 +151,5 @@ export function inspectPacket(p: Packet, v: Row): Finding[] {
         area: areaOf(d.refs?.[0] || ''),
         independent: false,
       });
-  return findings;
+  return [...findings, ...additionalChecks(p, v)];
 }

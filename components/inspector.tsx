@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Badge, Form, RefButton, Empty } from './ui';
 import { money, human, lineValue, workingValue, type Row } from '@/lib/types';
+import { directEffect, assetFields, readPath, workingReference } from '@/lib/review';
 export default function Inspector({
   workspace,
   version,
@@ -168,6 +169,9 @@ export default function Inspector({
     .reverse();
   const rates = Object.keys(latest.tax_effect_rates || {});
   const verification = workspace.state.verifications?.[selection.ref];
+  const direct = line ? directEffect(line) : null;
+  const asset = data?.resolved?.kind === 'asset' ? data.resolved.value : null;
+  const sourceField = data?.resolved?.kind === 'field' ? data.resolved.value : null;
   const overlays = workspace.state.adjustments.filter(
     (a: Row) => a.target === selection.ref && a.active && a.cycle === workspace.state.cycle,
   );
@@ -187,16 +191,33 @@ export default function Inspector({
       </div>
       <div className="inspector-selection">
         <span className="eyebrow">{line?.form || doc?.id || 'SELECTED REFERENCE'}</span>
-        <h2>{line?.label || doc?.title || selection.ref}</h2>
+        <h2>
+          {line?.label || doc?.title || asset?.description || sourceField?.label || selection.ref}
+        </h2>
         <div className="selected-value">
           {line
             ? lineValue(
                 line,
                 version === 'working' ? workingValue(line, workspace.state, actual) : line.value,
               )
-            : field
-              ? String(field.value)
-              : 'Source record'}
+            : asset && data?.resolved.field
+              ? String(
+                  version === 'working'
+                    ? workingReference(
+                        readPath(asset, data.resolved.field),
+                        selection.ref,
+                        workspace.state,
+                        actual,
+                      )
+                    : readPath(asset, data.resolved.field),
+                )
+              : field
+                ? String(
+                    version === 'working'
+                      ? workingReference(field.value, field.id, workspace.state, actual)
+                      : field.value,
+                  )
+                : 'Source record'}
           <Badge tone={verification ? 'green' : 'neutral'}>
             {verification ? 'Verified' : 'Review needed'}
           </Badge>
@@ -226,6 +247,16 @@ export default function Inspector({
           <>
             {tab === 'source' && (
               <>
+                {asset && (
+                  <details className="panel">
+                    <summary>Supplied asset schedule and calculation inputs</summary>
+                    <p className="micro">
+                      The invoice supports purchase/disposal evidence. Depreciation, method and life
+                      below are supplied engine records, not a direct reading from the invoice.
+                    </p>
+                    <pre className="asset-source-record">{JSON.stringify(asset, null, 2)}</pre>
+                  </details>
+                )}
                 {finding && (
                   <div className="insight-note">
                     <ScanLine size={15} />
@@ -327,6 +358,29 @@ export default function Inspector({
                         <code>
                           {doc.id} / p{field.page} / {field.field} / {field.id}
                         </code>
+                        {field.position && (
+                          <details className="field-map">
+                            <summary>Synthetic page location</summary>
+                            <p className="micro">
+                              A locator from the packet, not an original scan.
+                            </p>
+                            <div className="field-map-page">
+                              <span>
+                                {doc.id} · page {field.page}
+                              </span>
+                              <div
+                                style={{
+                                  left: `${field.position.x0 * 100}%`,
+                                  top: `${field.position.y0 * 100}%`,
+                                  width: `${Math.max(1, (field.position.x1 - field.position.x0) * 100)}%`,
+                                  height: `${Math.max(1, (field.position.y1 - field.position.y0) * 100)}%`,
+                                }}
+                                title={field.label}
+                                aria-label={`Selected field location: ${field.label}`}
+                              />
+                            </div>
+                          </details>
+                        )}
                         {field.position && (
                           <p className="micro">
                             Synthetic locator:{' '}
@@ -576,7 +630,11 @@ export default function Inspector({
                       <Form
                         key={`adjust-${selection.ref}`}
                         title="Working overlay"
-                        detail="Estimates use the packet’s supplied rates; no engine recomputation."
+                        detail={
+                          direct
+                            ? direct.label + '. This effect is enforced by the server.'
+                            : 'Estimates use supplied rates; downstream engine lines stay intact.'
+                        }
                         busy={busy}
                         submit="Save adjustment"
                         fields={[
@@ -591,8 +649,10 @@ export default function Inspector({
                           {
                             name: 'category',
                             label: 'Tax-effect category',
-                            options: rates.map((r) => ({ value: r, label: human(r) })),
-                            value: finding?.category || 'ordinary_income',
+                            options: direct
+                              ? [{ value: 'direct', label: direct.label }]
+                              : rates.map((r) => ({ value: r, label: human(r) })),
+                            value: direct ? 'direct' : finding?.category || 'ordinary_income',
                           },
                           {
                             name: 'direction',
@@ -637,6 +697,19 @@ export default function Inspector({
                       </div>
                     ))}
                   </>
+                )}
+                {(sourceField || asset) && (
+                  <SourceCorrection
+                    key={selection.ref}
+                    source={sourceField}
+                    asset={asset}
+                    selectedField={data.resolved.field}
+                    state={workspace.state}
+                    version={actual}
+                    command={command}
+                    busy={busy}
+                    actor={workspace.actor}
+                  />
                 )}
                 <details className="adjust-details">
                   <summary>
@@ -683,5 +756,147 @@ export default function Inspector({
         <ShieldCheck size={12} /> Original preserved. Every change attributable.
       </div>
     </aside>
+  );
+}
+
+function SourceCorrection({
+  source,
+  asset,
+  selectedField,
+  state,
+  version,
+  command,
+  busy,
+  actor,
+}: {
+  source: Row | null;
+  asset: Row | null;
+  selectedField?: string;
+  state: Row;
+  version: string;
+  command: (c: Row) => Promise<boolean>;
+  busy: boolean;
+  actor: Row;
+}) {
+  const options = asset ? assetFields(asset) : [];
+  const [field, setField] = useState(selectedField || options[0]?.key || '');
+  const original = asset ? readPath(asset, field) : source?.value;
+  const target = asset ? `asset:${asset.asset_id}/${field}` : source?.id;
+  const sensitive = source && ['ssn', 'ein', 'account_number'].includes(source.value_type);
+  const saved = state.adjustments.filter(
+    (a: Row) => a.target === target && a.active && a.cycle === state.cycle,
+  );
+  if (sensitive && !actor.sensitive_data_clearance)
+    return <p className="muted">Source correction requires sensitive-data clearance.</p>;
+  return (
+    <section className="panel source-correction">
+      <h3>Correct source evidence</h3>
+      <p className="muted">
+        Original source and engine output stay intact. This correction reopens review and has no
+        automatic tax effect; adjust the supported return line separately.
+      </p>
+      {asset && (
+        <label>
+          Asset property
+          <select value={field} onChange={(e) => setField(e.target.value)}>
+            {options.map((o) => (
+              <option key={o.key} value={o.key}>
+                {human(o.key)}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
+      <Form
+        key={target}
+        title={asset ? human(field) : source?.label}
+        busy={busy}
+        submit="Save source correction"
+        fields={[
+          {
+            name: 'value',
+            label: 'Reviewed source value',
+            type: typeof original === 'number' ? 'number' : 'text',
+            ...(typeof original === 'boolean'
+              ? {
+                  options: [
+                    { value: 'true', label: 'True' },
+                    { value: 'false', label: 'False' },
+                  ],
+                }
+              : {}),
+            value: sensitive
+              ? ''
+              : String(workingReference(original, target, state as any, version) ?? ''),
+          },
+          { name: 'reason', label: 'Evidence, authority and correction reason', type: 'textarea' },
+        ]}
+        onSubmit={(d) =>
+          command({
+            type: 'adjust',
+            target,
+            field,
+            value:
+              typeof original === 'number'
+                ? Number(d.value)
+                : typeof original === 'boolean'
+                  ? d.value === 'true'
+                  : original === null
+                    ? d.value.trim() === ''
+                      ? null
+                      : Number(d.value)
+                    : d.value,
+            reason: d.reason,
+            refs: source ? [source.id] : asset?.sources || [],
+          })
+        }
+      />
+      <Form
+        title={state.verifications[target] ? 'Update source verification' : 'Verify source reading'}
+        busy={busy}
+        submit="Record source verification"
+        fields={[
+          {
+            name: 'method',
+            label: 'Source verification method',
+            options: [
+              { value: 'agreed_to_source_document', label: 'Agreed to original source' },
+              { value: 'recalculated', label: 'Recalculated / corroborated' },
+            ],
+          },
+          {
+            name: 'reason',
+            label: 'Source verification evidence and conclusion',
+            type: 'textarea',
+          },
+        ]}
+        onSubmit={(d) =>
+          command({
+            type: 'verify',
+            target,
+            ...d,
+            refs: source ? [source.id] : asset?.sources || [],
+          })
+        }
+      />
+      {saved.map((a: Row) => (
+        <div className="saved-adjustment" key={a.id}>
+          <Badge>Reviewed source overlay</Badge>
+          <p>
+            {sensitive ? 'Protected value corrected' : `${String(a.original)} → ${String(a.value)}`}
+          </p>
+          <p>{a.reason}</p>
+          <button
+            className="text-button"
+            onClick={() => {
+              const reason = prompt('Reason to reverse this source correction:');
+              if (reason) void command({ type: 'undo', id: a.id, reason });
+            }}
+          >
+            Undo source correction
+          </button>
+        </div>
+      ))}
+    </section>
   );
 }

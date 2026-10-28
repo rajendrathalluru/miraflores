@@ -40,7 +40,8 @@ test('invariants are computed from the selected version and literal evidence', (
   assert(f.some((x) => x.id === 'identity-theo'));
   assert(!f.some((x) => x.id === 'identity-ngozi' || x.id === 'identity-erik'));
   assert(f.some((x) => x.id === 'duplicate-interest-SchB.1.2'));
-  assert(!f.some((x) => /W-2/.test(x.title)));
+  assert.equal(f.find((x) => x.id === 'duplicate-document-D09-D10')?.severity, 'info');
+  assert(!f.some((x) => x.id === 'duplicate-document-D09-D10' && x.severity === 'critical'));
 });
 test('ordinary overlays preserve engine output, estimate conversion and complete undo history', () => {
   const before = digest(p);

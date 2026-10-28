@@ -170,15 +170,19 @@ export function resolveRef(p: Packet, v: Row, ref: string): any {
     };
   const line = v.lines.find((x: Row) => x.key === ref);
   if (line) return { kind: 'line', value: line };
-  if (ref.startsWith('asset:'))
-    return { kind: 'asset', value: (v.assets || []).find((x: Row) => x.asset_id === ref.slice(6)) };
+  if (ref.startsWith('asset:')) {
+    const [id, field] = ref.slice(6).split('/');
+    const asset = (v.assets || []).find((x: Row) => x.asset_id === id);
+    return { kind: asset ? 'asset' : 'unknown', value: asset, field };
+  }
   if (ref.startsWith('household:'))
     return {
       kind: 'household',
       value: p.household.people.find((x: Row) => x.id === ref.slice(10)),
     };
   const related = p.household.related_returns?.find(
-    (x: Row) => x.id === ref || `return:${x.id}` === ref,
+    (x: Row, i: number) =>
+      x.id === ref || (x.id && `return:${x.id}` === ref) || `return:${i}` === ref,
   );
   if (related) return { kind: 'related_return', value: related };
   if (ref.startsWith('timeline:'))
@@ -215,10 +219,17 @@ export function trace(p: Packet, v: Row, key: string) {
     const l = v.lines.find((x: Row) => x.key === k);
     if (!l) {
       refs.add(k);
+      if (k.startsWith('asset:')) {
+        const asset = (v.assets || []).find((a: Row) => a.asset_id === k.slice(6).split('/')[0]);
+        for (const source of asset?.sources || []) walk(source);
+      }
       return;
     }
     nodes.push(l);
-    (l.sources || []).forEach((r: string) => refs.add(r));
+    (l.sources || []).forEach((r: string) => {
+      refs.add(r);
+      if (r.startsWith('asset:')) walk(r);
+    });
     (l.inputs || []).forEach(walk);
   };
   walk(key);

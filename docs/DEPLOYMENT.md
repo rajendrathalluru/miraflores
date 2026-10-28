@@ -53,3 +53,7 @@ Use a separate Supabase project/database for preview deployments if they must no
 ## Verification performed
 
 The previous production standalone build, core workflow tests and Compose validation passed. Workspace credential checks have subsequently been removed at the user's request. The Docker daemon was unavailable on the development machine, so the actual Linux image build and container startup remain to be tested with Docker Desktop running.
+
+## Complete review archives and printable records
+
+The server migrates the additive `firm_policies` and `handoff_archives` tables automatically. Existing packets/review state are preserved. Complete archive imports are limited to 64 MB in the application, with 8 MB per evidence file; configure any container reverse proxy accordingly. Platform request/response caps still apply. Printable HTML dossiers embed source content and permitted original evidence, so their size can exceed Vercel limits as well. Use a container host for larger packages or add private object-storage transfer before deploying those cases to serverless hosting. Full private archives require a cleared fictional staff role.

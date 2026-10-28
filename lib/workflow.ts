@@ -12,6 +12,8 @@ import {
 } from './types';
 import { digest, resolveRef } from './packet';
 import { inspectPacket } from './invariants';
+import { directEffect, assetFields, readPath, workingReference } from './review';
+import { booksBridge, paymentRows } from './reconciliation';
 export class DomainError extends Error {
   constructor(
     message: string,
@@ -50,6 +52,8 @@ export function stateHash(p: Packet, s: WorkState, area = 'all') {
     links: s.links || [],
     findings: s.findings,
     evidence: s.evidence,
+    standards: s.standards,
+    firmPolicyRevision: s.firmPolicyRevision || 0,
   });
 }
 export function outsideObligations(p: Packet): { id: string; label: string; detail: string }[] {
@@ -209,26 +213,109 @@ export function applyCommand(p: Packet, old: WorkState, actor: Row, c: Row): Wor
   };
   switch (c.type) {
     case 'adjust': {
-      const l = target();
-      if (typeof l.value !== 'number' || !Number.isFinite(c.value))
-        throw new DomainError('Only finite numeric values can be adjusted.');
-      const cat = required(c.category, 'Tax-effect category');
-      const rate = v.tax_effect_rates[cat];
+      const resolved = resolveRef(p, v, c.target || '');
+      const isLine = resolved.kind === 'line';
+      const isField = resolved.kind === 'field';
+      const isAsset = resolved.kind === 'asset';
+      const field = String(c.field || resolved.field || '');
+      const l = isLine ? resolved.value : null;
+      let original: any;
+      if (isLine) original = l.value;
+      else if (isField) original = resolved.value.value;
+      else if (isAsset && assetFields(resolved.value).some((f) => f.key === field))
+        original = readPath(resolved.value, field);
+      else
+        throw new DomainError(
+          'Choose a valid return line, extracted field, or supported asset field.',
+        );
+      const sensitive =
+        isField && ['ssn', 'ein', 'account_number'].includes(resolved.value.value_type);
+      if (sensitive && !actor.sensitive_data_clearance)
+        throw new DomainError('Sensitive-data clearance required for identity corrections.', 403);
+      let value = c.value;
+      if (typeof original === 'number') {
+        if (typeof value !== 'number' || !Number.isFinite(value))
+          throw new DomainError('A finite numeric value is required.');
+        if (isAsset && /cost|basis|life|depreciation|land_value/.test(field) && value < 0)
+          throw new DomainError('Asset amounts and life cannot be negative.');
+      } else if (typeof original === 'boolean') {
+        if (typeof value !== 'boolean') throw new DomainError('A true or false value is required.');
+      } else if (original === null) {
+        if (value !== null && (typeof value !== 'number' || !Number.isFinite(value)))
+          throw new DomainError('Use a number or explicit unknown value.');
+      } else {
+        value = required(value, 'Reviewed value');
+        if (sensitive && resolved.value.value_type === 'ssn' && !/^\d{3}-\d{2}-\d{4}$/.test(value))
+          throw new DomainError('Use the SSN format shown on the original identity document.');
+      }
+      const key = isAsset ? `asset:${resolved.value.asset_id}/${field}` : c.target;
+      const direct = isLine ? directEffect(l) : null;
+      const evidenceOnly = !isLine;
+      const cat = evidenceOnly
+        ? 'evidence_only'
+        : direct
+          ? 'direct'
+          : required(c.category, 'Tax-effect category');
+      const rate = direct
+        ? {
+            federal_per_dollar: direct.jurisdiction === 'federal' ? direct.sign : 0,
+            california_per_dollar: direct.jurisdiction === 'california' ? direct.sign : 0,
+          }
+        : evidenceOnly
+          ? { federal_per_dollar: 0, california_per_dollar: 0 }
+          : v.tax_effect_rates[cat];
       if (!rate) throw new DomainError('Choose a supplied tax-effect category.');
-      const dir = Number(c.direction ?? 1);
+      if (isLine && (typeof original !== 'number' || typeof value !== 'number'))
+        throw new DomainError(
+          'Computed return-line adjustments must be numeric. Correct source text using its extracted field.',
+        );
+      if (direct?.sign === -1 && typeof value === 'number' && value < 0)
+        throw new DomainError('Payment, credit and overpayment values cannot be negative.');
+      const dir = direct || evidenceOnly ? 1 : Number(c.direction ?? 1);
       if (!Number.isFinite(dir) || Math.abs(dir) > 100)
         throw new DomainError('Invalid conversion factor.');
-      const original = Number(l.value);
-      const delta = (c.value - original) * dir;
-      for (const a of s.adjustments)
-        if (a.target === l.key && a.version === v.version && a.cycle === s.cycle) a.active = false;
+      if (isLine) {
+        const dependencies = (key: string, seen = new Set<string>()): Set<string> => {
+          if (seen.has(key)) return seen;
+          seen.add(key);
+          for (const input of v.lines.find((x: Row) => x.key === key)?.inputs || [])
+            dependencies(input, seen);
+          return seen;
+        };
+        const own = dependencies(key);
+        const overlap = s.adjustments.find(
+          (a) =>
+            a.active &&
+            !a.evidenceOnly &&
+            a.version === v.version &&
+            a.cycle === s.cycle &&
+            a.target !== key &&
+            (own.has(a.target) || dependencies(a.target).has(key)),
+        );
+        if (overlap)
+          throw new DomainError(
+            `This line overlaps the active ${overlap.target} adjustment. Reverse that adjustment before editing a dependent total so its tax effect is not counted twice.`,
+            409,
+          );
+      }
+      const delta = evidenceOnly ? 0 : (value - original) * dir;
+      for (const adjustment of s.adjustments)
+        if (
+          adjustment.target === key &&
+          adjustment.version === v.version &&
+          adjustment.cycle === s.cycle
+        )
+          adjustment.active = false;
       s.adjustments.push({
         id,
-        target: l.key,
+        target: key,
+        targetType: resolved.kind,
+        field: field || undefined,
         original,
-        value: c.value,
+        value,
         category: cat,
         direction: dir,
+        evidenceOnly,
         reason: reason(),
         refs: (c.refs || []).slice(0, 100),
         actor: actor.id,
@@ -239,8 +326,12 @@ export function applyCommand(p: Packet, old: WorkState, actor: Row, c: Row): Wor
         federal: Math.round(delta * rate.federal_per_dollar * 100) / 100,
         california: Math.round(delta * rate.california_per_dollar * 100) / 100,
       });
-      delete s.verifications[l.key];
-      detail = `Adjusted ${l.key}: ${original} → ${c.value}. ${c.reason}`;
+      delete s.verifications[key];
+      // Source corrections also reopen verified downstream numbers without rewriting engine output.
+      if (!isLine) for (const line of v.lines) delete s.verifications[line.key];
+      detail = sensitive
+        ? `Corrected protected source ${key}; values remain masked in the audit.`
+        : `Adjusted ${key}: ${String(original)} → ${String(value)}. ${c.reason}`;
       break;
     }
     case 'undo': {
@@ -272,7 +363,19 @@ export function applyCommand(p: Packet, old: WorkState, actor: Row, c: Row): Wor
       }
       for (const key of keys) {
         const l = v.lines.find((l: Row) => l.key === key);
-        if (!l) throw new DomainError(`Unknown line ${key}; no changes saved.`);
+        const resolved = resolveRef(p, v, key);
+        const field = resolved.kind === 'field' ? resolved.value : null;
+        const asset = resolved.kind === 'asset' ? resolved.value : null;
+        const validAsset =
+          asset && resolved.field && assetFields(asset).some((f) => f.key === resolved.field);
+        if (!l && (c.type === 'bulk_verify' || (!field && !validAsset)))
+          throw new DomainError(`Unknown line or supported source ${key}; no changes saved.`);
+        if (
+          field &&
+          ['ssn', 'ein', 'account_number'].includes(field.value_type) &&
+          !actor.sensitive_data_clearance
+        )
+          throw new DomainError('Clearance required to verify protected identity evidence.', 403);
         s.verifications[key] = {
           id: randomUUID(),
           batchId: c.type === 'bulk_verify' ? id : null,
@@ -281,7 +384,14 @@ export function applyCommand(p: Packet, old: WorkState, actor: Row, c: Row): Wor
           refs: c.refs || [],
           actor: actor.id,
           at: now,
-          value: workingValue(l, s, v.version),
+          value: l
+            ? workingValue(l, s, v.version)
+            : workingReference(
+                field ? field.value : readPath(asset, resolved.field),
+                key,
+                s,
+                v.version,
+              ),
           version: v.version,
           cycle: s.cycle,
         };
@@ -332,7 +442,19 @@ export function applyCommand(p: Packet, old: WorkState, actor: Row, c: Row): Wor
       break;
     }
     case 'judgment': {
+      if (
+        c.kind === 'reconciliation' &&
+        !['reconcile:books', 'reconcile:payments'].includes(c.target)
+      )
+        throw new DomainError('Choose a supported reconciliation.');
+      const basis =
+        c.kind === 'reconciliation'
+          ? c.target === 'reconcile:books'
+            ? booksBridge(p, v, s)
+            : paymentRows(p, v, s)
+          : null;
       s.judgments.push({
+        ...(basis ? { basisHash: digest(basis) } : {}),
         id,
         kind: c.kind || 'judgment',
         target: c.target || 'all',
@@ -349,8 +471,12 @@ export function applyCommand(p: Packet, old: WorkState, actor: Row, c: Row): Wor
       const target = required(c.target, 'Source reference'),
         related = required(c.related, 'Related reference');
       if (
-        resolveRef(p, v, target).kind === 'unknown' ||
-        resolveRef(p, v, related).kind === 'unknown'
+        [target, related].some((ref) => {
+          const resolved = resolveRef(p, v, ref);
+          return (
+            resolved.kind === 'unknown' || (resolved.value === undefined && !resolved.document)
+          );
+        })
       )
         throw new DomainError('Use valid packet references for both ends of the link.');
       s.links ??= [];
@@ -590,6 +716,8 @@ export function applyCommand(p: Packet, old: WorkState, actor: Row, c: Row): Wor
     }
     case 'seen': {
       s.seen[actor.id] = s.revision;
+      s.seenPolicy ??= {};
+      s.seenPolicy[actor.id] = s.firmPolicyRevision || 0;
       detail = 'Marked current activity as seen';
       break;
     }

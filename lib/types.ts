@@ -9,8 +9,11 @@ export type Packet = Row & {
 export type Adjustment = {
   id: string;
   target: string;
-  original: number;
-  value: number;
+  original: any;
+  value: any;
+  targetType?: string;
+  field?: string;
+  evidenceOnly?: boolean;
   category: string;
   direction: number;
   reason: string;
@@ -47,6 +50,10 @@ export type WorkState = {
   plans: Row[];
   standards: string[];
   seen: Record<string, number>;
+  firmPolicyRevision?: number;
+  firmPolicyEvents?: Row[];
+  seenPolicy?: Record<string, number>;
+  inherited?: Row;
 };
 export type Finding = {
   id: string;

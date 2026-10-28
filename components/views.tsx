@@ -25,6 +25,11 @@ import {
   Scale,
 } from 'lucide-react';
 import { useWork } from './context';
+import { changesSince, reviewedAsset, workingReference } from '@/lib/review';
+import { varianceRows } from '@/lib/checks';
+import { BooksReconciliation, PaymentsReconciliation } from './reconciliation';
+import { CarryforwardPanel } from './carryforward';
+import { PriorPreparerComparison } from './prior-comparison';
 import { salesRows } from '@/lib/sales';
 import { Badge, Empty, Form, SectionTitle, RefButton } from './ui';
 import {
@@ -39,19 +44,30 @@ import {
 } from '@/lib/types';
 export function Dashboard() {
   const { data, packet, state, version, select, open, setView } = useWork();
-  const openFindings = data.findings.filter((f: Row) => !state.findings[f.id]);
+  const openFindings = data.findings
+    .filter((f: Row) => !state.findings[f.id])
+    .sort(
+      (a: Row, b: Row) =>
+        ({ critical: 0, warning: 1, info: 2 })[a.severity as 'critical'] -
+          { critical: 0, warning: 1, info: 2 }[b.severity as 'critical'] ||
+        Number(a.id.startsWith('variance-')) - Number(b.id.startsWith('variance-')),
+    );
   const independent = openFindings.filter((f: Row) => f.independent);
   const critical = openFindings.filter((f: Row) => f.severity === 'critical');
-  const reviewed = Object.keys(state.verifications).length;
+  const reviewed = Object.keys(state.verifications).filter((key) =>
+    version.lines.some((l: Row) => l.key === key),
+  ).length;
   const totals = estimatedTotals(version, state as any);
   const prior = packet.prior_years?.return_2024?.lines || {};
   const current = version.summary.federal;
   const [filter, setFilter] = useState('all');
+  const changes = changesSince(state as any, data.actor.id);
   const shown = openFindings.filter(
     (f: Row) =>
       filter === 'all' ||
       (filter === 'independent' && f.independent) ||
-      (filter === 'critical' && f.severity === 'critical'),
+      (filter === 'critical' && f.severity === 'critical') ||
+      (filter === 'variance' && f.id.startsWith('variance-')),
   );
   return (
     <>
@@ -73,6 +89,18 @@ export function Dashboard() {
           </button>
         }
       />
+      <section className="changes-banner">
+        <div>
+          <strong>{changes.events.length} changes since your last visit</strong>
+          <p>
+            Seen through revision {changes.seen}. Review changed numbers, evidence and decisions
+            before acknowledging.
+          </p>
+        </div>
+        <button className="button" onClick={() => open('activity')}>
+          Review changes
+        </button>
+      </section>
       <div className="metrics-grid">
         <Metric
           label="Federal balance due"
@@ -142,6 +170,7 @@ export function Dashboard() {
             { id: 'all', label: 'All findings' },
             { id: 'critical', label: 'Critical' },
             { id: 'independent', label: 'Independent' },
+            { id: 'variance', label: 'Prior-year swings' },
           ].map((x) => (
             <button key={x.id} aria-pressed={filter === x.id} onClick={() => setFilter(x.id)}>
               {x.label}
@@ -332,6 +361,27 @@ export function ReturnView() {
           </button>
         ))}
       </div>
+      <details className="panel variance-summary">
+        <summary>
+          {varianceRows(packet as any, version).length} material prior-year swings · firm thresholds
+        </summary>
+        <div className="review-list">
+          {varianceRows(packet as any, version).map((l: Row) => (
+            <button key={l.key} className="summary-line" onClick={() => select(l.key)}>
+              <span>
+                {l.label}
+                <small>{l.key}</small>
+              </span>
+              <strong>
+                {money(l.prior)} → {money(l.value)}
+              </strong>
+              <Badge tone="amber">
+                {l.percent === null ? 'New amount' : `${l.percent.toFixed(1)}%`}
+              </Badge>
+            </button>
+          ))}
+        </div>
+      </details>
       <div className="table-toolbar">
         <div className="search-input">
           <Search size={15} />
@@ -502,9 +552,10 @@ export function ReturnView() {
         </p>
         <details>
           <summary>Prior notes, basis gaps, carryovers and open items</summary>
-          <RecordTree value={packet.prior_years} />
+          <RecordTree value={packet.prior_years} refPrefix="py:/" />
         </details>
       </div>
+      <PriorPreparerComparison />
     </>
   );
 }
@@ -661,7 +712,10 @@ export function DocumentsView() {
   );
 }
 export function AssetsView() {
-  const { packet, version, select } = useWork();
+  const { packet, version, select, state, working } = useWork();
+  const assets = version.assets.map((a: Row) =>
+    working ? reviewedAsset(a, state as any, version.version) : a,
+  );
   const [tab, setTab] = useState('assets');
   return (
     <>
@@ -676,6 +730,7 @@ export function AssetsView() {
           'sales',
           'books to tax',
           'state split',
+          'payments',
           'basis & carryovers',
           'retirement & foreign',
           'deductions & limits',
@@ -689,13 +744,13 @@ export function AssetsView() {
         <>
           <div className="mini-stats">
             <div>
-              <strong>{version.assets.length}</strong>
+              <strong>{assets.length}</strong>
               <span>assets on the schedule</span>
             </div>
             <div>
               <strong>
                 {money(
-                  version.assets.reduce(
+                  assets.reduce(
                     (s: number, a: Row) =>
                       s + (a.federal?.['depreciation_' + packet.household.tax_year] || 0),
                     0,
@@ -707,7 +762,7 @@ export function AssetsView() {
             <div>
               <strong>
                 {money(
-                  version.assets.reduce(
+                  assets.reduce(
                     (s: number, a: Row) =>
                       s + (a.california?.['depreciation_' + packet.household.tax_year] || 0),
                     0,
@@ -718,7 +773,7 @@ export function AssetsView() {
             </div>
           </div>
           <div className="asset-list">
-            {version.assets.map((a: Row) => (
+            {assets.map((a: Row) => (
               <article className="panel asset-card" key={a.asset_id}>
                 <div className="flex-between">
                   <div className="asset-title">
@@ -738,7 +793,12 @@ export function AssetsView() {
                 <div className="asset-data">
                   <div>
                     <span>Cost basis</span>
-                    <strong>{money(a.cost)}</strong>
+                    <button
+                      className="number-button"
+                      onClick={() => select(`asset:${a.asset_id}/cost`)}
+                    >
+                      {money(a.cost)}
+                    </button>
                   </div>
                   <div>
                     <span>Method / life</span>
@@ -749,21 +809,40 @@ export function AssetsView() {
                   </div>
                   <div>
                     <span>Federal</span>
-                    <strong>
+                    <button
+                      className="number-button"
+                      onClick={() =>
+                        select(
+                          `asset:${a.asset_id}/federal.depreciation_${packet.household.tax_year}`,
+                        )
+                      }
+                    >
                       {money(a.federal?.['depreciation_' + packet.household.tax_year], 2)}
-                    </strong>
+                    </button>
                   </div>
                   <div>
                     <span>California</span>
-                    <strong>
+                    <button
+                      className="number-button"
+                      onClick={() =>
+                        select(
+                          `asset:${a.asset_id}/california.depreciation_${packet.household.tax_year}`,
+                        )
+                      }
+                    >
                       {money(a.california?.['depreciation_' + packet.household.tax_year], 2)}
-                    </strong>
+                    </button>
                   </div>
                   <div>
                     <span>AMT</span>
-                    <strong>
+                    <button
+                      className="number-button"
+                      onClick={() =>
+                        select(`asset:${a.asset_id}/amt.depreciation_${packet.household.tax_year}`)
+                      }
+                    >
                       {money(a.amt?.['depreciation_' + packet.household.tax_year], 2)}
-                    </strong>
+                    </button>
                   </div>
                 </div>
                 <div className="refs">
@@ -783,24 +862,23 @@ export function AssetsView() {
       ) : tab === 'sales' ? (
         <Sales />
       ) : tab === 'books to tax' ? (
-        <>
-          <h2>Business books → Schedule C</h2>
-          <p className="muted">
-            Supplied inputs and tax treatments. Click any amount for the complete graph.
-          </p>
-          <LineList lines={version.lines.filter((l: Row) => l.form === 'SchC')} />
-        </>
+        <BooksReconciliation />
+      ) : tab === 'payments' ? (
+        <PaymentsReconciliation />
       ) : tab === 'state split' ? (
         <StateSplit />
       ) : tab === 'basis & carryovers' ? (
         <>
           <div className="panel lower-panel">
             <h2>Basis history · unknown stays unknown</h2>
-            <RecordTree value={packet.prior_years?.basis_records} />
+            <RecordTree value={packet.prior_years?.basis_records} refPrefix="py:/basis_records/" />
           </div>
           <div className="panel lower-panel">
             <h2>Carryovers into this return</h2>
-            <RecordTree value={packet.prior_years?.carryovers_into_2025} />
+            <RecordTree
+              value={packet.prior_years?.carryovers_into_2025}
+              refPrefix="py:/carryovers_into_2025/"
+            />
             <h2>Supplied carryovers out</h2>
             <RecordTree value={version.carryovers_out} />
           </div>
@@ -845,11 +923,11 @@ function LineList({ lines }: { lines: Row[] }) {
   );
 }
 function Sales() {
-  const { packet, version, select } = useWork();
+  const { packet, version, select, state, working } = useWork();
   const [query, setQuery] = useState(''),
     [page, setPage] = useState(1),
     [cohort, setCohort] = useState('all');
-  const all = salesRows(packet as any, version);
+  const all = salesRows(packet as any, version, working ? (state as any) : undefined);
   const list = all.filter(
     (l: Row) =>
       (cohort === 'all' || l.sourceDocument === cohort) &&
@@ -915,6 +993,9 @@ function Sales() {
           />
         </div>
         <Badge>Full totals stay fixed across pages</Badge>
+        <Badge tone="amber">
+          {all.filter((l: Row) => l.basis === null).length} unknown basis records
+        </Badge>
       </div>
       <div className="table-wrap">
         <table>
@@ -939,8 +1020,16 @@ function Sales() {
                     <small>{l.label.match(/acquired.*?(?=;)/)?.[0] || ''}</small>
                   </button>
                 </td>
-                <td className="number">{money(l.proceeds, 2)}</td>
-                <td className="number">{money(l.basis, 2)}</td>
+                <td className="number">
+                  <button className="number-button" onClick={() => select(l.proceedsRef || l.key)}>
+                    {money(l.proceeds, 2)}
+                  </button>
+                </td>
+                <td className="number">
+                  <button className="number-button" onClick={() => select(l.basisRef || l.key)}>
+                    {l.basis === null ? 'Unknown' : money(l.basis, 2)}
+                  </button>
+                </td>
                 <td className="number">
                   <button className="number-button" onClick={() => select(l.key)}>
                     {money(l.gain, 2)}
@@ -1182,6 +1271,7 @@ export function PeopleView() {
                       'election',
                       'due_diligence',
                       'penalty_decision',
+                      'notice_response',
                       'prior_year_variance',
                     ].map((x) => ({ value: x, label: human(x) })),
                   },
@@ -1250,6 +1340,7 @@ export function PeopleView() {
 export function FilingView() {
   const { data, packet, state, command, busy, readOnly, open } = useWork();
   const [tab, setTab] = useState('filing');
+  const [amendOpen, setAmendOpen] = useState(false);
   return (
     <>
       <SectionTitle
@@ -1257,10 +1348,14 @@ export function FilingView() {
         title="Ready means accounted for."
         description="Close the review, preserve the record, and give next year a head start."
         action={
-          <a className="button" href={`/api/export?id=${data.id}&kind=defense`}>
-            <Download size={14} />
-            Defense record
-          </a>
+          <div className="refs">
+            <a className="button" href={`/api/report?id=${data.id}&kind=defense`}>
+              <Download size={14} /> Printable defense record
+            </a>
+            <a className="button" href={`/api/export?id=${data.id}&kind=defense`}>
+              JSON + evidence
+            </a>
+          </div>
         }
       />
       <div className="tabs">
@@ -1268,6 +1363,7 @@ export function FilingView() {
           'filing',
           'completeness',
           'outside filings',
+          'notice response',
           'next year',
           'firm standards',
           'time & budget',
@@ -1335,16 +1431,27 @@ export function FilingView() {
             {state.freezes.length > 0 && (
               <button
                 className="button"
-                disabled={busy}
-                onClick={() => {
-                  const reason = prompt('Reason for opening an amendment:');
-                  if (reason) void command({ type: 'amend', reason });
-                }}
+                disabled={busy || data.actor.role !== 'partner'}
+                onClick={() => setAmendOpen(!amendOpen)}
               >
                 Open amendment
               </button>
             )}
           </div>
+          {amendOpen && (
+            <Form
+              title="Open an amendment above the frozen record"
+              detail="The filed snapshot stays intact. New approvals will be required for the amended cycle."
+              busy={busy}
+              submit="Create amended cycle"
+              fields={[{ name: 'reason', label: 'Amendment reason and scope', type: 'textarea' }]}
+              onSubmit={async (d) => {
+                const ok = await command({ type: 'amend', ...d });
+                if (ok) setAmendOpen(false);
+                return ok;
+              }}
+            />
+          )}
           <div className="split-forms">
             {!readOnly && (
               <>
@@ -1382,7 +1489,7 @@ export function FilingView() {
           ))}
           <details className="panel">
             <summary>Supplied agency records and notices</summary>
-            <RecordTree value={packet.tax_agency_records} />
+            <RecordTree value={packet.tax_agency_records} refPrefix="agency:/" />
           </details>
         </>
       ) : tab === 'completeness' ? (
@@ -1452,19 +1559,82 @@ export function FilingView() {
             </div>
           </div>
         </>
+      ) : tab === 'notice response' ? (
+        <section className="notice-response">
+          <h2>Notice response dossier</h2>
+          <p className="muted">
+            Link the notice, state the supported response and preserve a self-contained source
+            record. Nothing is sent to an agency.
+          </p>
+          {(packet.tax_agency_records?.notices || []).map((notice: Row, i: number) => (
+            <article className="panel" key={notice.id || i}>
+              <Badge>{notice.agency}</Badge>
+              <h3>{notice.type || notice.id}</h3>
+              <p>{notice.summary || JSON.stringify(notice.items_under_examination || [])}</p>
+              <p>
+                Notice tax year {notice.tax_year} · response due{' '}
+                {notice.response_due || 'See original notice'}
+              </p>
+              {notice.tax_year !== packet.household.tax_year && (
+                <p className="notice">
+                  This is a related prior-year notice. Obtain that year's complete workpaper before
+                  using this engagement's dossier as a response.
+                </p>
+              )}
+              <div className="refs">
+                <RefButton onClick={() => open('activity')}>Review supporting decisions</RefButton>
+                <a
+                  className="button"
+                  href={`/api/report?id=${data.id}&kind=defense&notice=${encodeURIComponent(notice.id || '')}`}
+                >
+                  Download printable notice dossier
+                </a>
+              </div>
+              {!readOnly && (
+                <Form
+                  title="Record a supported response"
+                  busy={busy}
+                  fields={[
+                    {
+                      name: 'reason',
+                      label: 'Response, proposed action and unresolved questions',
+                      type: 'textarea',
+                    },
+                    {
+                      name: 'authority',
+                      label: 'Evidence and supporting authority',
+                      type: 'textarea',
+                    },
+                  ]}
+                  onSubmit={(d) =>
+                    command({
+                      type: 'judgment',
+                      kind: 'notice_response',
+                      target: `agency:/notices/${i}`,
+                      ...d,
+                    })
+                  }
+                />
+              )}
+              {state.judgments
+                .filter(
+                  (j: Row) => j.kind === 'notice_response' && j.target === `agency:/notices/${i}`,
+                )
+                .map((j: Row) => (
+                  <blockquote key={j.id}>
+                    <p>{j.reason}</p>
+                    <small>{j.authority}</small>
+                  </blockquote>
+                ))}
+            </article>
+          ))}
+          <a className="button" href={`/api/report?id=${data.id}&kind=client`}>
+            Download printable client copy
+          </a>
+        </section>
       ) : tab === 'next year' ? (
         <>
-          <div className="notice">
-            <Link2 size={17} />
-            <p>
-              Carry the review forward with its history. Unknown basis remains unknown; the exported
-              handoff includes source revision, assets, supplied carryovers and planning records.
-            </p>
-            <a href={`/api/export?id=${data.id}&kind=carryforward`} className="button">
-              <Download size={13} />
-              Export handoff
-            </a>
-          </div>
+          <CarryforwardPanel />
           <div className="split-forms">
             {!readOnly && (
               <Form
@@ -1497,6 +1667,10 @@ export function FilingView() {
         <>
           <div className="panel">
             <h2>Firm-wide review standards</h2>
+            <p className="micro">
+              Shared policy revision {state.firmPolicyRevision || 0}. New policies apply across
+              engagements and reopen affected approvals.
+            </p>
             <ol className="standards-list">
               {state.standards.map((x: string, i: number) => (
                 <li key={i}>{x}</li>
@@ -1561,11 +1735,31 @@ export function FilingView() {
   );
 }
 export function Activity() {
-  const { state, data } = useWork();
+  const { state, data, select, command, busy, readOnly } = useWork();
+  const [onlyNew, setOnlyNew] = useState(true);
+  const changes = changesSince(state as any, data.actor.id);
+  const events = onlyNew ? changes.events : changes.all;
   return (
     <>
-      {state.audit.length ? (
-        state.audit
+      <div className="activity-controls">
+        <p>
+          Seen through revision {changes.seen} · {changes.events.length} new changes
+        </p>
+        <button className="button" onClick={() => setOnlyNew(!onlyNew)}>
+          {onlyNew ? 'Show full history' : 'Only changes since my visit'}
+        </button>
+        {!readOnly && (
+          <button
+            className="button primary"
+            disabled={busy}
+            onClick={() => void command({ type: 'seen' })}
+          >
+            Acknowledge reviewed changes
+          </button>
+        )}
+      </div>
+      {events.length ? (
+        events
           .slice()
           .reverse()
           .map((a: Row) => (
@@ -1574,29 +1768,52 @@ export function Activity() {
               <div>
                 <div className="flex-between">
                   <strong>{human(a.type)}</strong>
-                  <Badge>r{a.revision}</Badge>
+                  <Badge tone={changes.events.some((e: Row) => e.id === a.id) ? 'blue' : 'neutral'}>
+                    {a.scope === 'firm' ? `Policy ${a.policyRevision}` : `r${a.revision}`}
+                    {changes.events.some((e: Row) => e.id === a.id) ? ' · New' : ''}
+                  </Badge>
                 </div>
                 <p>{a.detail}</p>
                 <small>
                   {a.name} · {new Date(a.at).toLocaleString()} · Cycle {a.cycle + 1}
                 </small>
+                {a.target && (
+                  <button className="text-button" onClick={() => select(a.target)}>
+                    Inspect {a.target}
+                  </button>
+                )}
               </div>
             </div>
           ))
       ) : (
         <Empty
-          title="Your review starts with a clean record"
-          detail="Every change will retain who, what, when, and why."
+          title="No unread review changes"
+          detail="New changes will appear here after the last revision you acknowledged."
         />
       )}
     </>
   );
 }
-export function RecordTree({ value, depth = 0 }: { value: any; depth?: number }) {
+export function RecordTree({
+  value,
+  depth = 0,
+  refPrefix,
+}: {
+  value: any;
+  depth?: number;
+  refPrefix?: string;
+}) {
+  const { select } = useWork();
   if (value === null || value === undefined)
     return <span className="unknown">Unknown / not supplied</span>;
   if (typeof value !== 'object')
-    return <span className={typeof value === 'number' ? 'mono' : ''}>{String(value)}</span>;
+    return typeof value === 'number' && refPrefix ? (
+      <button className="number-button" onClick={() => select(refPrefix.replace(/\/$/, ''))}>
+        {String(value)}
+      </button>
+    ) : (
+      <span className={typeof value === 'number' ? 'mono' : ''}>{String(value)}</span>
+    );
   return (
     <div className="record-tree">
       {Object.entries(value).map(([k, v]) => (
@@ -1606,12 +1823,28 @@ export function RecordTree({ value, depth = 0 }: { value: any; depth?: number })
               <summary>
                 {human(k)} <span>{Array.isArray(v) ? `${v.length} records` : ''}</span>
               </summary>
-              <RecordTree value={v} depth={depth + 1} />
+              <RecordTree
+                value={v}
+                depth={depth + 1}
+                refPrefix={
+                  refPrefix
+                    ? `${refPrefix}${k.replace(/~/g, '~0').replace(/\//g, '~1')}/`
+                    : undefined
+                }
+              />
             </details>
           ) : (
             <div className="record-pair">
               <strong>{human(k)}</strong>
-              <RecordTree value={v} depth={depth + 1} />
+              <RecordTree
+                value={v}
+                depth={depth + 1}
+                refPrefix={
+                  refPrefix
+                    ? `${refPrefix}${k.replace(/~/g, '~0').replace(/\//g, '~1')}/`
+                    : undefined
+                }
+              />
             </div>
           )}
         </div>
