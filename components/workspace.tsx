@@ -625,6 +625,15 @@ export default function Workspace() {
                 <span className="dot green" />
                 <select
                   aria-label="Return version"
+                  onPointerDown={(e) => {
+                    e.currentTarget.dataset.pointerFocus = 'true';
+                  }}
+                  onKeyDown={(e) => {
+                    delete e.currentTarget.dataset.pointerFocus;
+                  }}
+                  onBlur={(e) => {
+                    delete e.currentTarget.dataset.pointerFocus;
+                  }}
                   value={versionKey}
                   onChange={(e) => changeVersion(e.target.value)}
                 >

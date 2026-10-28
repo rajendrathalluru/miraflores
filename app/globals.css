@@ -625,7 +625,11 @@ nav + .nav-section-label {
   background: transparent;
   font-size: 0.8125rem;
   font-weight: 540;
-  outline-offset: 5px;
+  outline: none;
+}
+.version-picker:has(select:focus-visible:not([data-pointer-focus])) {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
 }
 .version-picker > svg {
   color: #5c6c67;
