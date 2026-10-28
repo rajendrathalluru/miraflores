@@ -1,3 +1,4 @@
+import { hasWorkspaceAccess } from './access';
 import { cookies } from 'next/headers';
 import { NextRequest, NextResponse } from 'next/server';
 import {
@@ -20,15 +21,7 @@ import {
   type Row,
 } from './types';
 export function guard(req: NextRequest) {
-  const host = req.nextUrl.hostname;
-  if (!['localhost', '127.0.0.1', '[::1]'].includes(host)) {
-    const token = process.env.WORKPAPER_ACCESS_TOKEN;
-    if (!token || req.headers.get('authorization') !== `Bearer ${token}`)
-      throw new DomainError(
-        'This evaluator sandbox is available on localhost. Configure trusted access before shared hosting.',
-        403,
-      );
-  }
+  if (!hasWorkspaceAccess(req)) throw new DomainError('Workspace access denied.', 403);
   if (!['GET', 'HEAD'].includes(req.method)) {
     const origin = req.headers.get('origin');
     if (

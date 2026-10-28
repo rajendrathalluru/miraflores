@@ -7,3 +7,6 @@ tmp/
 outputs/
 *.tsbuildinfo
 .DS_Store
+
+# Deployment secrets
+deployment.env
