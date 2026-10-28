@@ -53,6 +53,11 @@ export async function db(): Promise<Database> {
         for (const statement of schema.split(';').filter((x) => x.trim()))
           await database.query(statement);
       } else {
+        if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
+          throw new Error(
+            'DATABASE_URL is not configured for this deployment. Set the Supabase session-pooler connection string in your hosting environment, then redeploy. Local database storage is unavailable on serverless hosting.',
+          );
+        }
         await mkdir(dataDirectory(), { recursive: true, mode: 0o700 });
         const pg = new PGlite(path.join(dataDirectory(), 'postgres'));
         await pg.waitReady;
