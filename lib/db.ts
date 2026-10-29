@@ -53,10 +53,15 @@ export async function db(): Promise<Database> {
           ...wrap(sql),
           transaction: (cb) => sql.begin(async (s) => cb(wrap(s))) as any,
         };
-        await database.query('CREATE SCHEMA IF NOT EXISTS miraflores');
-        await database.query('REVOKE ALL ON SCHEMA miraflores FROM PUBLIC');
-        for (const statement of schema.split(';').filter((x) => x.trim()))
-          await database.query(statement);
+        // Separate server instances can initialize simultaneously. Serialize catalog
+        // changes on one transaction/connection, including the schema privilege update.
+        await database.transaction(async (tx) => {
+          await tx.query('SELECT pg_advisory_xact_lock(20417, 1)');
+          await tx.query('CREATE SCHEMA IF NOT EXISTS miraflores');
+          await tx.query('REVOKE ALL ON SCHEMA miraflores FROM PUBLIC');
+          for (const statement of schema.split(';').filter((x) => x.trim()))
+            await tx.query(statement);
+        });
       } else {
         if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
           throw new Error(
@@ -80,17 +85,27 @@ export async function db(): Promise<Database> {
         await importPacket(database, packet);
       }
       return database;
-    })();
+    })().catch((error) => {
+      g.__workpaperDB = undefined;
+      g.__reviewSchema = undefined;
+      throw error;
+    });
   const database = await g.__workpaperDB;
   if (!g.__reviewSchema)
-    g.__reviewSchema = (async () => {
-      await database.query(
-        "CREATE TABLE IF NOT EXISTS firm_policies(id TEXT PRIMARY KEY,revision INT NOT NULL DEFAULT 0,rules JSONB NOT NULL,events JSONB NOT NULL DEFAULT '[]'::jsonb)",
-      );
-      await database.query(
-        'CREATE TABLE IF NOT EXISTS handoff_archives(id TEXT PRIMARY KEY,engagement_id TEXT REFERENCES engagements(id),content_hash TEXT NOT NULL,payload JSONB NOT NULL)',
-      );
-    })();
+    g.__reviewSchema = database
+      .transaction(async (tx) => {
+        if (process.env.DATABASE_URL) await tx.query('SELECT pg_advisory_xact_lock(20417, 1)');
+        await tx.query(
+          "CREATE TABLE IF NOT EXISTS firm_policies(id TEXT PRIMARY KEY,revision INT NOT NULL DEFAULT 0,rules JSONB NOT NULL,events JSONB NOT NULL DEFAULT '[]'::jsonb)",
+        );
+        await tx.query(
+          'CREATE TABLE IF NOT EXISTS handoff_archives(id TEXT PRIMARY KEY,engagement_id TEXT REFERENCES engagements(id),content_hash TEXT NOT NULL,payload JSONB NOT NULL)',
+        );
+      })
+      .catch((error) => {
+        g.__reviewSchema = undefined;
+        throw error;
+      });
   await g.__reviewSchema;
   return database;
 }
