@@ -79,8 +79,8 @@ export function Dashboard() {
       </div>
       <SectionTitle
         eyebrow=""
-        title="Clarity, before you sign."
-        description="One return. Every source, decision, and next step connected."
+        title="Review overview"
+        description={`${openFindings.length} open findings in this review`}
         action={
           <button className="button" onClick={() => open('activity')}>
             <HistoryIcon />
@@ -139,8 +139,8 @@ export function Dashboard() {
         </div>
         <div>
           <div className="eyebrow">INDEPENDENT CHECKS · CURRENT ENGINE VERSION</div>
-          <h2>{critical.length} things worth a closer look.</h2>
-          <p>Confidence is a reading. Verification is a conclusion.</p>
+          <h2>{critical.length} priority findings</h2>
+          <p>Resolve source conflicts before signing off.</p>
         </div>
         <button
           className="button primary"
@@ -163,7 +163,6 @@ export function Dashboard() {
           <h2>
             Review queue <span className="count-pill">{openFindings.length}</span>
           </h2>
-          <p>Surface disagreements. Follow the evidence. Keep the original.</p>
         </div>
         <div className="segmented">
           {[
@@ -333,9 +332,9 @@ export function ReturnView() {
   return (
     <>
       <SectionTitle
-        eyebrow="RETURN & AREAS"
-        title="The return, in context."
-        description="Every supplied line, linked to its rule, dependencies, and source."
+        eyebrow=""
+        title="Return & areas"
+        description="Select a value to inspect its source and calculation."
         action={
           <button className="button" onClick={() => open('scenario')}>
             <GitBranch size={14} />
@@ -574,9 +573,9 @@ export function DocumentsView() {
   return (
     <>
       <SectionTitle
-        eyebrow="DOCUMENT INDEX"
-        title="Nothing left unaccounted for."
-        description="See what arrived, where it landed, and what still needs a conclusion."
+        eyebrow=""
+        title="Documents"
+        description="Review sources, record dispositions, and attach evidence."
         action={
           !readOnly && (
             <button className="button primary" onClick={() => open('evidence')}>
@@ -641,7 +640,8 @@ export function DocumentsView() {
               </Badge>
               <h3>{d.title}</h3>
               <span>
-                {d.id} · {d.page_count} pages · {d.document_type}
+                {d.id} · {d.page_count} {d.page_count === 1 ? 'page' : 'pages'} ·{' '}
+                {human(d.document_type)}
               </span>
               <p>{d.issuer}</p>
               <div className="document-card-foot">
@@ -720,9 +720,9 @@ export function AssetsView() {
   return (
     <>
       <SectionTitle
-        eyebrow="ASSETS & BASIS"
-        title="The long view, by asset."
-        description="Federal, California and AMT treatment, with the history kept intact."
+        eyebrow=""
+        title="Assets & basis"
+        description="Compare federal, California, and AMT schedules."
       />
       <div className="tabs">
         {[
@@ -870,7 +870,7 @@ export function AssetsView() {
       ) : tab === 'basis & carryovers' ? (
         <>
           <div className="panel lower-panel">
-            <h2>Basis history · unknown stays unknown</h2>
+            <h2>Basis history</h2>
             <RecordTree value={packet.prior_years?.basis_records} refPrefix="py:/basis_records/" />
           </div>
           <div className="panel lower-panel">
@@ -1116,9 +1116,9 @@ export function PeopleView() {
   return (
     <>
       <SectionTitle
-        eyebrow="PEOPLE & Q&A"
-        title="A conversation becomes evidence."
-        description="Clear owners, durable answers, and review notes that matter."
+        eyebrow=""
+        title="People & Q&A"
+        description="Manage questions, assignments, and review decisions."
         action={
           !readOnly && (
             <button className="button primary" onClick={() => open('question')}>
@@ -1204,7 +1204,7 @@ export function PeopleView() {
             ))
           ) : (
             <Empty
-              title="Space for the questions that matter"
+              title="No questions yet"
               detail="Ask the client, consult a colleague, or create a blocking review note. Answers remain part of the record."
             />
           )}
@@ -1214,7 +1214,7 @@ export function PeopleView() {
           <div className="split-forms">
             {!readOnly && (
               <Form
-                title="Assign the next step"
+                title="New assignment"
                 busy={busy}
                 fields={[
                   { name: 'title', label: 'Task' },
@@ -1344,9 +1344,9 @@ export function FilingView() {
   return (
     <>
       <SectionTitle
-        eyebrow="FILING & FIRM"
-        title="Ready means accounted for."
-        description="Close the review, preserve the record, and give next year a head start."
+        eyebrow=""
+        title="Filing & firm"
+        description="Review filing gates, approvals, and firm standards."
         action={
           <div className="refs">
             <a className="button" href={`/api/report?id=${data.id}&kind=defense`}>
@@ -1386,9 +1386,7 @@ export function FilingView() {
                   ? 'Ready for partner review'
                   : 'Review in progress'}
               </Badge>
-              <h2>
-                {data.gates.filter((g: Row) => g.count).length} gates before the final signature.
-              </h2>
+              <h2>{data.gates.filter((g: Row) => g.count).length} filing gates remaining.</h2>
               <p>Filing and signatures are recorded simulations. No tax return is transmitted.</p>
             </div>
           </div>
@@ -1440,7 +1438,7 @@ export function FilingView() {
           </div>
           {amendOpen && (
             <Form
-              title="Open an amendment above the frozen record"
+              title="Start amendment"
               detail="The filed snapshot stays intact. New approvals will be required for the amended cycle."
               busy={busy}
               submit="Create amended cycle"
@@ -1561,7 +1559,7 @@ export function FilingView() {
         </>
       ) : tab === 'notice response' ? (
         <section className="notice-response">
-          <h2>Notice response dossier</h2>
+          <h2>Notice responses</h2>
           <p className="muted">
             Link the notice, state the supported response and preserve a self-contained source
             record. Nothing is sent to an agency.
@@ -1638,7 +1636,7 @@ export function FilingView() {
           <div className="split-forms">
             {!readOnly && (
               <Form
-                title="Leave the next preparer a clear path"
+                title="Add next-year planning item"
                 busy={busy}
                 fields={[
                   { name: 'title', label: 'Planning item / notice response' },

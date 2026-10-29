@@ -13,7 +13,7 @@ import {
   Link2,
   LockKeyhole,
 } from 'lucide-react';
-import { Badge, Form, RefButton, Empty } from './ui';
+import { Badge, Form, RefButton, Empty, EvidenceRecord } from './ui';
 import { money, human, lineValue, workingValue, type Row } from '@/lib/types';
 import { directEffect, assetFields, readPath, workingReference } from '@/lib/review';
 export default function Inspector({
@@ -185,7 +185,7 @@ export default function Inspector({
         </div>
         <div>
           <strong>X-ray inspector</strong>
-          <span>Every number has a story.</span>
+          <span>Source · Calculation · History</span>
         </div>
         <button className="icon-button" onClick={onClose} aria-label="Close inspector">
           <X size={18} />
@@ -254,12 +254,12 @@ export default function Inspector({
               <>
                 {asset && (
                   <details className="panel">
-                    <summary>Supplied asset schedule and calculation inputs</summary>
+                    <summary>Asset schedule details</summary>
                     <p className="micro">
                       The invoice supports purchase/disposal evidence. Depreciation, method and life
                       below are supplied engine records, not a direct reading from the invoice.
                     </p>
-                    <pre className="asset-source-record">{JSON.stringify(asset, null, 2)}</pre>
+                    <EvidenceRecord value={asset} />
                   </details>
                 )}
                 {finding && (
@@ -438,10 +438,7 @@ export default function Inspector({
                 ) : (
                   <div className="reference-record">
                     <span className="eyebrow">{data.resolved.kind}</span>
-                    <pre>
-                      {JSON.stringify(data.resolved.value, null, 2) ||
-                        'Select a linked source below.'}
-                    </pre>
+                    <EvidenceRecord value={data.resolved.value} />
                   </div>
                 )}
                 {data.references?.length > 0 && (
@@ -576,7 +573,7 @@ export default function Inspector({
                   ))
                 ) : (
                   <Empty
-                    title="A clean audit trail starts here"
+                    title="No review history yet"
                     detail="Verification, adjustments and decisions are recorded with a person, reason and time."
                   />
                 )}

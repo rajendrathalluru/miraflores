@@ -851,7 +851,7 @@ export default function Workspace() {
                   <Logo small />
                   MIRAFLORES
                 </span>
-                <p>Human judgment. Connected evidence.</p>
+
                 <span>
                   {isClient
                     ? 'Client portal'
@@ -953,7 +953,7 @@ export default function Workspace() {
               <div className="search-results">
                 {search.length < 2 ? (
                   <Empty
-                    title="Follow any thread"
+                    title="Search the workpaper"
                     detail="Search return lines, source documents, extracted fields, or saved decisions. Try “mileage”, “basis”, or “SchC.9”."
                   />
                 ) : (
@@ -1004,7 +1004,7 @@ export default function Workspace() {
             </div>
           ) : modal === 'question' ? (
             <Form
-              title="Make the next step clear"
+              title="New question"
               busy={busy}
               submit="Save question as evidence"
               fields={[
@@ -1193,16 +1193,16 @@ function modalTitle(key: string) {
   return (
     (
       {
-        search: 'Everything, connected.',
-        import: 'Bring another return into focus.',
-        scenario: 'Decide with a clear comparison.',
-        compare: 'The story between versions.',
-        question: 'Start a review conversation.',
-        evidence: 'Attach the evidence.',
-        timeline: 'A season, replayable.',
-        notifications: 'Your next steps.',
-        activity: 'What changed, and why.',
-        about: 'A clearer kind of workpaper.',
+        search: 'Search workpaper',
+        import: 'Import packet',
+        scenario: 'What-if comparison',
+        compare: 'Version comparison',
+        question: 'New question',
+        evidence: 'Attach evidence',
+        timeline: 'Season timeline',
+        notifications: 'Notifications',
+        activity: 'Review activity',
+        about: 'About this workspace',
       } as Row
     )[key] || key
   );
@@ -1295,7 +1295,7 @@ function ImportPacket({
         <div className="upload-symbol">
           <FolderOpen size={28} />
         </div>
-        <h3>A new client. The same connected review.</h3>
+        <h3>Import client packet</h3>
         <p>
           Upload a pipeline JSON packet with household, documents, extracted values and computed
           return versions.
@@ -1455,7 +1455,7 @@ function ClientPortal({
     <>
       <SectionTitle
         eyebrow="YOUR CLIENT PORTAL"
-        title="A clearer view of your return."
+        title="Your return"
         description="Ask a question, review the supplied result, and record your approval."
       />
       <div className="metrics-grid client-metrics">
@@ -1484,7 +1484,7 @@ function ClientPortal({
         Download your printable review copy
       </a>
       <div className="panel client-approval">
-        <h2>Your approval is tied to this review.</h2>
+        <h2>Approve this review</h2>
         <p>
           Revision {data.state.revision} · Content {data.contentHash?.slice(0, 18)}
         </p>

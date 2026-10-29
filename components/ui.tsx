@@ -188,7 +188,7 @@ export function SectionTitle({
   return (
     <div className="section-title">
       <div>
-        <div className="eyebrow">{eyebrow}</div>
+        {eyebrow && <div className="eyebrow">{eyebrow}</div>}
         <h1>{title}</h1>
         <p>{description}</p>
       </div>
@@ -202,5 +202,31 @@ export function RefButton({ children, onClick }: { children: ReactNode; onClick:
       {children}
       <ArrowUpRight size={12} />
     </button>
+  );
+}
+
+export function EvidenceRecord({ value, depth = 0 }: { value: unknown; depth?: number }) {
+  if (value == null) return <span className="unknown">Not supplied</span>;
+  if (typeof value !== 'object')
+    return <span>{typeof value === 'boolean' ? (value ? 'Yes' : 'No') : String(value)}</span>;
+  return (
+    <div className="record-tree">
+      {Object.entries(value).map(([key, item]) =>
+        typeof item === 'object' && item !== null ? (
+          <details key={key} open={depth === 0}>
+            <summary>
+              {key.replace(/_/g, ' ')}
+              {Array.isArray(item) ? ` · ${item.length} items` : ''}
+            </summary>
+            <EvidenceRecord value={item} depth={depth + 1} />
+          </details>
+        ) : (
+          <div className="record-pair" key={key}>
+            <strong>{key.replace(/_/g, ' ')}</strong>
+            <EvidenceRecord value={item} depth={depth + 1} />
+          </div>
+        ),
+      )}
+    </div>
   );
 }
