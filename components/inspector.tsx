@@ -192,7 +192,7 @@ export default function Inspector({
   const verification = workspace.state.verifications?.[selection.ref];
   const direct = line ? directEffect(line) : null;
   const asset = data?.resolved?.kind === 'asset' ? data.resolved.value : null;
-  const sourceField = data?.resolved?.kind === 'field' ? data.resolved.value : !line ? field : null;
+  const sourceField = data?.resolved?.kind === 'field' ? data.resolved.value : field || null;
   const destinations = (data?.destinations || []).filter((item: Row) => item.version === actual);
   const overlays = workspace.state.adjustments.filter(
     (a: Row) => a.target === selection.ref && a.active && a.cycle === workspace.state.cycle,
@@ -257,7 +257,20 @@ export default function Inspector({
           { id: 'formula', icon: GitBranch, label: 'Formula' },
           { id: 'history', icon: History, label: 'History' },
         ].map((t) => (
-          <button role="tab" aria-selected={tab === t.id} key={t.id} onClick={() => setTab(t.id)}>
+          <button
+            role="tab"
+            aria-selected={tab === t.id}
+            key={t.id}
+            onClick={() => {
+              if (tab === t.id) return;
+              if (
+                panelRef.current?.querySelector('[data-dirty="true"]') &&
+                !window.confirm('Discard the unsaved review draft and switch tabs?')
+              )
+                return;
+              setTab(t.id);
+            }}
+          >
             <t.icon size={14} />
             {t.label}
           </button>
@@ -623,10 +636,13 @@ export default function Inspector({
               </div>
             ) : (
               <div className="inspector-actions">
-                <h3>
-                  <ShieldCheck size={16} /> Review actions
-                </h3>
-                {line && (
+                {tab !== 'history' && (
+                  <h3>
+                    <ShieldCheck size={16} />{' '}
+                    {tab === 'source' ? 'Source review' : 'Calculation review'}
+                  </h3>
+                )}
+                {tab === 'formula' && line && (
                   <>
                     <Form
                       key={`verify-${selection.ref}`}
@@ -711,6 +727,10 @@ export default function Inspector({
                         }
                       />
                     </details>
+                  </>
+                )}
+                {tab === 'history' && line && (
+                  <>
                     {overlays.map((a: Row) => (
                       <div className="saved-adjustment" key={a.id}>
                         <Badge tone="green">Overlay saved</Badge>
@@ -731,7 +751,7 @@ export default function Inspector({
                     ))}
                   </>
                 )}
-                {(sourceField || asset) && (
+                {tab === 'source' && (sourceField || asset) && (
                   <SourceCorrection
                     key={`${selection.ref}-${sourceField?.id || ''}`}
                     source={sourceField}
@@ -744,25 +764,27 @@ export default function Inspector({
                     actor={workspace.actor}
                   />
                 )}
-                <details className="adjust-details">
-                  <summary>
-                    Link another year or record <Link2 size={14} />
-                  </summary>
-                  <Form
-                    key={`link-${selection.ref}`}
-                    title="Connect related evidence"
-                    busy={busy}
-                    fields={[
-                      {
-                        name: 'related',
-                        label: 'Packet reference',
-                        value: 'py:/return_2024/lines/F1040.11',
-                      },
-                      { name: 'reason', label: 'How these records relate', type: 'textarea' },
-                    ]}
-                    onSubmit={(d) => command({ type: 'link', target: selection.ref, ...d })}
-                  />
-                </details>
+                {tab === 'source' && (
+                  <details className="adjust-details">
+                    <summary>
+                      Link another year or record <Link2 size={14} />
+                    </summary>
+                    <Form
+                      key={`link-${selection.ref}`}
+                      title="Connect related evidence"
+                      busy={busy}
+                      fields={[
+                        {
+                          name: 'related',
+                          label: 'Packet reference',
+                          value: 'py:/return_2024/lines/F1040.11',
+                        },
+                        { name: 'reason', label: 'How these records relate', type: 'textarea' },
+                      ]}
+                      onSubmit={(d) => command({ type: 'link', target: selection.ref, ...d })}
+                    />
+                  </details>
+                )}
                 {finding && (
                   <Form
                     key={`finding-${finding.id}`}
