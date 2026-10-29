@@ -5008,6 +5008,8 @@ textarea::placeholder {
 }
 .field-map-page {
   margin-top: 12px;
+  width: 100%;
+  max-width: 190px;
   position: relative;
   aspect-ratio: 0.77;
   background: repeating-linear-gradient(white, white 19px, #f0f3f4 20px);

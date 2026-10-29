@@ -25,6 +25,7 @@ export default function Inspector({
   command,
   busy,
   replay,
+  onWorking,
 }: {
   workspace: Row;
   version: string;
@@ -34,6 +35,7 @@ export default function Inspector({
   command: (c: Row) => Promise<boolean>;
   busy: boolean;
   replay: string;
+  onWorking: () => void;
 }) {
   const [data, setData] = useState<Row | null>(null),
     [error, setError] = useState(''),
@@ -166,14 +168,17 @@ export default function Inspector({
     ) || '';
   const match = read ? printed.indexOf(read) : -1;
   const history = workspace.state.audit
-    .filter((a: Row) => a.target === selection.ref || (line && a.target === line.key))
+    .filter(
+      (a: Row) =>
+        a.target === selection.ref || a.target === field?.id || (line && a.target === line.key),
+    )
     .slice()
     .reverse();
   const rates = Object.keys(latest.tax_effect_rates || {});
   const verification = workspace.state.verifications?.[selection.ref];
   const direct = line ? directEffect(line) : null;
   const asset = data?.resolved?.kind === 'asset' ? data.resolved.value : null;
-  const sourceField = data?.resolved?.kind === 'field' ? data.resolved.value : null;
+  const sourceField = data?.resolved?.kind === 'field' ? data.resolved.value : !line ? field : null;
   const overlays = workspace.state.adjustments.filter(
     (a: Row) => a.target === selection.ref && a.active && a.cycle === workspace.state.cycle,
   );
@@ -239,6 +244,18 @@ export default function Inspector({
         ))}
       </div>
       <div className="inspector-content">
+        {version !== 'working' &&
+          !['client', 'examiner', 'firm_administrator'].includes(workspace.actor.role) && (
+            <div className="notice">
+              <div>
+                <strong>Original engine version · read only</strong>
+                <p>Switch to Working to verify evidence and save review changes.</p>
+                <button className="button primary" onClick={onWorking}>
+                  Switch to Working
+                </button>
+              </div>
+            </div>
+          )}
         {error ? (
           <div role="alert">
             <p className="error">{error}</p>
@@ -593,7 +610,7 @@ export default function Inspector({
             ) : (
               <div className="inspector-actions">
                 <h3>
-                  <ShieldCheck size={16} /> Make the review explicit
+                  <ShieldCheck size={16} /> Review actions
                 </h3>
                 {line && (
                   <>
@@ -702,7 +719,7 @@ export default function Inspector({
                 )}
                 {(sourceField || asset) && (
                   <SourceCorrection
-                    key={selection.ref}
+                    key={`${selection.ref}-${sourceField?.id || ''}`}
                     source={sourceField}
                     asset={asset}
                     selectedField={data.resolved.field}

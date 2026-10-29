@@ -866,6 +866,11 @@ export default function Workspace() {
                 key={`${data.actor.id}-${s.cycle}-${selection.ref}-${versionKey}`}
                 workspace={data}
                 version={versionKey}
+                onWorking={() => {
+                  if (!confirmLeave()) return;
+                  setReplay('');
+                  changeVersion('working');
+                }}
                 selection={selection}
                 onSelect={(r, v) => select(r, undefined, v)}
                 onClose={() => {
