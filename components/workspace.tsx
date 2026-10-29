@@ -26,10 +26,8 @@ import {
   Bell,
   PanelRightClose,
   ArrowRight,
-  LockKeyhole,
   FileText,
   UserRound,
-  Settings2,
   FolderOpen,
   Paperclip,
   ExternalLink,
@@ -653,18 +651,13 @@ export default function Workspace() {
                 <RefreshCw size={13} />
               </button>
             </div>
-            <div className="sandbox-label">
-              <LockKeyhole size={12} />
-              Assignment demo
-            </div>
-            <button className="profile" onClick={() => setModal('about')}>
+            <div className="profile">
               <div className="avatar firm">M</div>
               <div>
                 <strong>Miraflores</strong>
                 <span>Private tax workspace</span>
               </div>
-              <Settings2 size={15} />
-            </button>
+            </div>
           </div>
         </aside>
         <div className="main-shell" inert={smallScreen && menu}>
@@ -1198,31 +1191,7 @@ export default function Workspace() {
             <div className="dialog-content">
               <Activity />
             </div>
-          ) : (
-            <div className="dialog-content">
-              <p>
-                A verification IDE built around immutable pipeline output, connected source
-                evidence, and attributable professional judgment.
-              </p>
-              <div className="notice">
-                <LockKeyhole size={18} />
-                <p>
-                  This is a local evaluator sandbox with a fictional role switcher. Server action
-                  gates and masked views are implemented; real staff authentication is required
-                  before shared hosting.
-                </p>
-              </div>
-              <p>
-                Uploads accept compatible pipeline JSON packets and evidence files. OCR and a tax
-                computation engine are outside this prototype. Tax effects are packet-rate
-                estimates.
-              </p>
-              <p>
-                Stack: Next.js, React, TypeScript, embedded Postgres (PGlite); Supabase/Postgres
-                connection via a server-side DATABASE_URL. No external AI key is required.
-              </p>
-            </div>
-          )}
+          ) : null}
         </Modal>
       )}
     </WorkContext.Provider>
@@ -1251,7 +1220,6 @@ function modalTitle(key: string) {
         timeline: 'Season timeline',
         notifications: 'Notifications',
         activity: 'Review activity',
-        about: 'About this workspace',
       } as Row
     )[key] || key
   );

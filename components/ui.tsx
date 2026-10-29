@@ -43,7 +43,6 @@ export function Modal({
     <dialog ref={ref} className={`dialog ${wide ? 'wide' : ''}`} aria-label={title}>
       <div className="dialog-head">
         <div>
-          <span className="eyebrow">MIRAFLORES WORKSPACE</span>
           <h2>{title}</h2>
         </div>
         <button
