@@ -163,6 +163,7 @@ small {
   top: 10px;
 }
 .button {
+  color: var(--ink);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -383,8 +384,17 @@ small {
   margin-top: 33px;
   margin-bottom: 26px;
   background: #fcfdfd;
+  min-height: 68px;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
+}
+.engagement-switch:hover {
+  background: #f2f7f6;
+  border-color: #b4cfca;
 }
 .engagement-icon {
+  flex-shrink: 0;
   height: 29px;
   width: 29px;
   border: 1px solid #dae5e5;
@@ -406,15 +416,18 @@ small {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+  line-height: 1.45;
 }
 .engagement-switch span {
   display: block;
   color: #606b72;
   font-size: 0.8125rem;
   margin-top: 4px;
+  line-height: 1.4;
 }
 .engagement-switch > svg {
   color: #616b70;
+  flex-shrink: 0;
 }
 .engagement-switch select,
 .actor-select select {
@@ -425,8 +438,8 @@ small {
   height: 100%;
   cursor: pointer;
 }
-.engagement-switch:focus-within,
-.actor-select:focus-within {
+.engagement-switch:has(select:focus-visible),
+.actor-select:has(select:focus-visible) {
   outline: 2px solid #339d97;
   outline-offset: 2px;
 }
@@ -767,7 +780,6 @@ nav + .nav-section-label {
 .section-title > .button {
   font-size: 0.8125rem;
   padding: 8px 10px;
-  color: #5d6c75;
 }
 .metrics-grid {
   display: grid;
@@ -5020,4 +5032,68 @@ textarea::placeholder {
   font: 0.75rem/1.7 var(--mono);
   max-height: 320px;
   overflow: auto;
+}
+
+/* Keep the engagement picker inside the product's type and spacing system. */
+.engagement-menu {
+  position: relative;
+  margin: 28px 0;
+}
+.engagement-menu .engagement-switch {
+  margin: 0;
+  list-style: none;
+  cursor: pointer;
+}
+.engagement-switch::-webkit-details-marker {
+  display: none;
+}
+.engagement-menu .engagement-switch:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+.engagement-options {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  width: 100%;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--paper);
+  box-shadow: 0 12px 32px #182c381a;
+  z-index: 60;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.engagement-options > p {
+  margin: 6px 8px 9px;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.engagement-options button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 10px;
+  border-radius: 6px;
+}
+.engagement-options button:hover,
+.engagement-options button[aria-current='true'] {
+  background: var(--teal-pale);
+}
+.engagement-options strong {
+  display: block;
+  font-size: 0.8125rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.engagement-options span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  line-height: 1.5;
 }

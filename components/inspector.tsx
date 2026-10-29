@@ -37,6 +37,7 @@ export default function Inspector({
 }) {
   const [data, setData] = useState<Row | null>(null),
     [error, setError] = useState(''),
+    [retry, setRetry] = useState(0),
     [tab, setTab] = useState('source'),
     [page, setPage] = useState(0),
     [fieldId, setFieldId] = useState(''),
@@ -121,10 +122,11 @@ export default function Inspector({
         if (token === req.current) setData(d);
       })
       .catch((e) => {
-        if (e.name !== 'AbortError') setError(e.message);
+        if (token === req.current && !ctrl.signal.aborted && e.name !== 'AbortError')
+          setError(e.message);
       });
     return () => ctrl.abort();
-  }, [workspace.id, workspace.actor.id, actual, selection.ref, page, replay]);
+  }, [workspace.id, workspace.actor.id, actual, selection.ref, page, replay, retry]);
   useEffect(() => {
     if (!reveal) return;
     const hide = () => setReveal('');
@@ -238,9 +240,12 @@ export default function Inspector({
       </div>
       <div className="inspector-content">
         {error ? (
-          <p className="error" role="alert">
-            {error}
-          </p>
+          <div role="alert">
+            <p className="error">{error}</p>
+            <button className="button" onClick={() => setRetry((value) => value + 1)}>
+              Retry loading evidence
+            </button>
+          </div>
         ) : !data ? (
           <div className="skeleton">Connecting the evidence…</div>
         ) : (

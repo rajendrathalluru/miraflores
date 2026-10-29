@@ -509,31 +509,64 @@ export default function Workspace() {
               miraflores<small>WORKPAPER IDE</small>
             </span>
           </a>
-          <div className="engagement-switch">
-            <div className="engagement-icon">{name.slice(0, 1)}</div>
-            <div>
-              <strong>{name}</strong>
-              <span>
-                {p.household.tax_year} ·{' '}
-                {['MFJ', 'married_filing_jointly'].includes(p.household.filing_status)
-                  ? 'Joint return'
-                  : human(p.household.filing_status || 'Return')}
-              </span>
-            </div>
-            <ChevronsUpDown size={13} />
-            <select
-              aria-label="Engagement"
-              value={data.id}
-              onChange={(e) => void changeEngagement(e.target.value)}
-              disabled={busy || !!pending}
+          <details
+            className="engagement-menu"
+            onKeyDown={(event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                event.stopPropagation();
+                event.currentTarget.removeAttribute('open');
+                event.currentTarget.querySelector('summary')?.focus();
+              }
+            }}
+            onBlur={(event) => {
+              if (!event.currentTarget.contains(event.relatedTarget as Node | null))
+                event.currentTarget.removeAttribute('open');
+            }}
+          >
+            <summary
+              className="engagement-switch"
+              aria-label="Choose engagement"
+              aria-disabled={busy || !!pending}
+              onClick={(event) => {
+                if (busy || pending) event.preventDefault();
+              }}
             >
+              <div className="engagement-icon">{name.slice(0, 1)}</div>
+              <div>
+                <strong>{name}</strong>
+                <span>
+                  {p.household.tax_year} ·{' '}
+                  {['MFJ', 'married_filing_jointly'].includes(p.household.filing_status)
+                    ? 'Joint return'
+                    : human(p.household.filing_status || 'Return')}
+                </span>
+              </div>
+              <ChevronsUpDown size={13} />
+            </summary>
+            <div className="engagement-options" aria-label="Engagements">
+              <p>Switch engagement</p>
               {data.engagements.map((e: Row) => (
-                <option value={e.id} key={e.id}>
-                  {e.name} · {e.tax_year}
-                </option>
+                <button
+                  type="button"
+                  key={e.id}
+                  disabled={busy || !!pending}
+                  aria-current={e.id === data.id ? 'true' : undefined}
+                  aria-label={`${e.name}, ${e.tax_year}${e.id === data.id ? ', current engagement' : ''}`}
+                  onClick={(event) => {
+                    event.currentTarget.closest('details')?.removeAttribute('open');
+                    if (e.id !== data.id) void changeEngagement(e.id);
+                  }}
+                >
+                  <strong>{e.name}</strong>
+                  <span>
+                    {e.tax_year}
+                    {e.id === data.id ? ' · Current engagement' : ''}
+                  </span>
+                </button>
               ))}
-            </select>
-          </div>
+            </div>
+          </details>
           <div className="nav-section-label">WORKSPACE</div>
           <nav aria-label="Main navigation">
             {destinations
