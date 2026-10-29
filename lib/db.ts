@@ -39,7 +39,6 @@ export async function db(): Promise<Database> {
           max_lifetime: 60,
           prepare: false,
           connect_timeout: 10,
-          connection: { search_path: 'miraflores' },
           types: {
             json: {
               to: 114,
@@ -53,9 +52,16 @@ export async function db(): Promise<Database> {
         const wrap = (s: any): Tx => ({
           query: async (q, p = []) => ({ rows: await s.unsafe(q, p) }),
         });
+        // Transaction poolers may assign a different backend on every transaction.
+        // Set the private schema inside each transaction, never as session state.
+        const transaction: Database['transaction'] = (cb) =>
+          sql.begin(async (s) => {
+            await s.unsafe('SET LOCAL search_path TO miraflores');
+            return cb(wrap(s));
+          }) as any;
         database = {
-          ...wrap(sql),
-          transaction: (cb) => sql.begin(async (s) => cb(wrap(s))) as any,
+          query: (q, p = []) => transaction((tx) => tx.query(q, p)),
+          transaction,
         };
         // Separate server instances can initialize simultaneously. Serialize catalog
         // changes on one transaction/connection, including the schema privilege update.

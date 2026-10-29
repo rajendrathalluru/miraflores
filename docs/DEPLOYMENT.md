@@ -6,9 +6,9 @@ The same Node.js application runs on a Linux container host, a VPS, or a managed
 
 Set secrets in the platform's secret manager, never in Git or image build arguments:
 
-- `DATABASE_URL`: Supabase session-pooler URI, including the URL-encoded password and `?sslmode=require`.
+- `DATABASE_URL`: Supabase transaction-pooler URI (port 6543), including the URL-encoded password and `?sslmode=require`.
 
-The app limits each instance to one database connection, releases idle connections after 10 seconds, and rotates connections after 60 seconds. If Supabase reports `EMAXCONNSESSION`, stop unused app processes and restart/redeploy the app so existing pools are replaced. Multiple deployed instances still share the project's session-pool limit.
+The app limits each instance to one database connection, releases idle connections after 10 seconds, and rotates connections after 60 seconds. If Supabase reports `EMAXCONNSESSION`, stop unused app processes and restart/redeploy the app so existing pools are replaced. Use transaction pooling on port 6543 for serverless hosting. Each query/transaction sets the private schema with SET LOCAL, so it does not depend on session state.
 - `PORT`: optional; container default is `3000`. `HOSTNAME` defaults to `0.0.0.0` in the image.
 
 Use HTTPS on the hosting platform or reverse proxy. The workspace has no shared login. Anyone with the URL can open the demo and switch fictional personas. Do not put real taxpayer data in this demo. Keep the database schema private and restrict credentials; use genuine identity, membership checks and database permissions before real client use.
