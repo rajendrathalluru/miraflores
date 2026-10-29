@@ -32,7 +32,11 @@ export async function db(): Promise<Database> {
       let database: Database;
       if (process.env.DATABASE_URL) {
         const sql = postgres(process.env.DATABASE_URL, {
-          max: 5,
+          // Every server instance owns a pool. Keep session-mode connections
+          // small and release idle sessions instead of exhausting Supavisor.
+          max: 1,
+          idle_timeout: 10,
+          max_lifetime: 60,
           prepare: false,
           connect_timeout: 10,
           connection: { search_path: 'miraflores' },
