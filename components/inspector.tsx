@@ -26,6 +26,9 @@ export default function Inspector({
   busy,
   replay,
   onWorking,
+  onBack,
+  backLabel,
+  onFinding,
 }: {
   workspace: Row;
   version: string;
@@ -36,6 +39,9 @@ export default function Inspector({
   busy: boolean;
   replay: string;
   onWorking: () => void;
+  onBack: () => void;
+  backLabel?: string;
+  onFinding: (finding: Row) => void;
 }) {
   const [data, setData] = useState<Row | null>(null),
     [error, setError] = useState(''),
@@ -108,6 +114,7 @@ export default function Inspector({
     setFieldId('');
     setReveal('');
     setDestLimit(20);
+    panelRef.current?.querySelector('.inspector-content')?.scrollTo({ top: 0 });
   }, [selection.ref, actual, workspace.actor.id]);
   useEffect(() => {
     const token = ++req.current;
@@ -141,6 +148,13 @@ export default function Inspector({
   }, [reveal]);
   const line = data?.resolved?.kind === 'line' ? data.resolved.value : null;
   const finding = selection.finding;
+  const priorityQueue = (workspace.findingsByVersion?.[actual] || workspace.findings || []).filter(
+    (item: Row) =>
+      item.severity === 'critical' &&
+      (!workspace.state.findings?.[item.id] || item.id === finding?.id),
+  );
+  const findingIndex = priorityQueue.findIndex((item: Row) => item.id === finding?.id);
+
   const field =
     data?.fields?.find((e: Row) => e.id === fieldId) ||
     data?.fields?.find((e: Row) => e.id === selection.ref) ||
@@ -179,11 +193,17 @@ export default function Inspector({
   const direct = line ? directEffect(line) : null;
   const asset = data?.resolved?.kind === 'asset' ? data.resolved.value : null;
   const sourceField = data?.resolved?.kind === 'field' ? data.resolved.value : !line ? field : null;
+  const destinations = (data?.destinations || []).filter((item: Row) => item.version === actual);
   const overlays = workspace.state.adjustments.filter(
     (a: Row) => a.target === selection.ref && a.active && a.cycle === workspace.state.cycle,
   );
   return (
     <aside ref={panelRef} className="inspector" aria-label="X-ray inspector">
+      {backLabel && (
+        <button className="inspector-back" onClick={onBack}>
+          ← {backLabel}
+        </button>
+      )}
       <div className="inspector-head">
         <div className="inspector-icon">
           <ScanLine size={17} />
@@ -243,6 +263,29 @@ export default function Inspector({
           </button>
         ))}
       </div>
+      {findingIndex >= 0 && (
+        <div className="finding-navigation" aria-label="Priority finding navigation">
+          <span>
+            Priority finding {findingIndex + 1} of {priorityQueue.length}
+          </span>
+          <div>
+            <button
+              className="button"
+              disabled={findingIndex === 0 || busy}
+              onClick={() => onFinding(priorityQueue[findingIndex - 1])}
+            >
+              Previous
+            </button>
+            <button
+              className="button"
+              disabled={findingIndex === priorityQueue.length - 1 || busy}
+              onClick={() => onFinding(priorityQueue[findingIndex + 1])}
+            >
+              Next
+            </button>
+          </div>
+        </div>
+      )}
       <div className="inspector-content">
         {version !== 'working' &&
           !['client', 'examiner', 'firm_administrator'].includes(workspace.actor.role) && (
@@ -380,38 +423,6 @@ export default function Inspector({
                         <code>
                           {doc.id} / p{field.page} / {field.field} / {field.id}
                         </code>
-                        {field.position && (
-                          <details className="field-map">
-                            <summary>Synthetic page location</summary>
-                            <p className="micro">
-                              A locator from the packet, not an original scan.
-                            </p>
-                            <div className="field-map-page">
-                              <span>
-                                {doc.id} · page {field.page}
-                              </span>
-                              <div
-                                style={{
-                                  left: `${field.position.x0 * 100}%`,
-                                  top: `${field.position.y0 * 100}%`,
-                                  width: `${Math.max(1, (field.position.x1 - field.position.x0) * 100)}%`,
-                                  height: `${Math.max(1, (field.position.y1 - field.position.y0) * 100)}%`,
-                                }}
-                                title={field.label}
-                                aria-label={`Selected field location: ${field.label}`}
-                              />
-                            </div>
-                          </details>
-                        )}
-                        {field.position && (
-                          <p className="micro">
-                            Synthetic locator:{' '}
-                            {Object.entries(field.position)
-                              .map(([k, v]) => `${k} ${Number(v).toFixed(3)}`)
-                              .join(' · ')}
-                            . Printed-text highlight is approximate.
-                          </p>
-                        )}
                         {['ssn', 'ein', 'account_number'].includes(field.value_type) &&
                           workspace.actor.sensitive_data_clearance && (
                             <button
@@ -462,21 +473,23 @@ export default function Inspector({
                   <div className="inspector-section">
                     <h3>
                       <Link2 size={14} />
-                      Linked evidence
+                      Related source evidence
                     </h3>
                     <div className="reference-list">
-                      {data.references.map((r: Row) => (
-                        <button key={r.ref} onClick={() => onSelect(r.ref)}>
-                          <div>
-                            <strong>{r.value?.label || r.document?.title || r.ref}</strong>
-                            <code>
-                              {r.ref}
-                              {r.value?.page ? ` · page ${r.value.page}` : ''}
-                            </code>
-                          </div>
-                          <ArrowUpRight size={14} />
-                        </button>
-                      ))}
+                      {data.references
+                        .filter((r: Row) => r.ref !== selection.ref)
+                        .map((r: Row) => (
+                          <button key={r.ref} onClick={() => onSelect(r.ref)}>
+                            <div>
+                              <strong>{r.value?.label || r.document?.title || r.ref}</strong>
+                              <code>
+                                Open source · {r.ref}
+                                {r.value?.page ? ` · page ${r.value.page}` : ''}
+                              </code>
+                            </div>
+                            <ArrowUpRight size={14} />
+                          </button>
+                        ))}
                     </div>
                   </div>
                 )}
@@ -499,11 +512,11 @@ export default function Inspector({
                 )}
                 <div className="inspector-section">
                   <h3>
-                    Where this source lands <Badge>{data.destinations?.length || 0}</Badge>
+                    Affected return lines <Badge>{destinations.length || 0}</Badge>
                   </h3>
-                  {data.destinations?.length ? (
+                  {destinations.length ? (
                     <div className="reference-list">
-                      {data.destinations.slice(0, destLimit).map((x: Row, i: number) => (
+                      {destinations.slice(0, destLimit).map((x: Row, i: number) => (
                         <button
                           key={`${x.version}-${x.key}-${i}`}
                           onClick={() => onSelect(x.key, x.version)}
@@ -511,19 +524,20 @@ export default function Inspector({
                           <div>
                             <strong>{x.label}</strong>
                             <code>
-                              {x.version} · {x.key}
+                              {x.direct ? 'Direct input' : 'Downstream calculation'} · {x.version} ·{' '}
+                              {x.key}
                             </code>
                           </div>
                           <ChevronRight size={13} />
                         </button>
                       ))}
-                      {data.destinations.length > destLimit && (
+                      {destinations.length > destLimit && (
                         <button
                           className="text-button"
                           onClick={() => setDestLimit(destLimit + 20)}
                         >
-                          Show next {Math.min(20, data.destinations.length - destLimit)} of{' '}
-                          {data.destinations.length} destinations
+                          Show next {Math.min(20, destinations.length - destLimit)} of{' '}
+                          {destinations.length} destinations
                         </button>
                       )}
                     </div>

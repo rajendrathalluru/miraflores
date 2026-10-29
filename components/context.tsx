@@ -3,6 +3,7 @@ import { createContext, useContext } from 'react';
 import type { Row } from '@/lib/types';
 export type WorkspaceContextType = {
   data: Row;
+  selectedRef?: string;
   packet: Row;
   state: Row;
   version: Row;

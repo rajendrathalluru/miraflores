@@ -1,5 +1,5 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   ArrowRight,
   ArrowUpRight,
@@ -140,15 +140,16 @@ export function Dashboard() {
         <div>
           <div className="eyebrow">INDEPENDENT CHECKS · CURRENT ENGINE VERSION</div>
           <h2>{critical.length} priority findings</h2>
-          <p>Resolve source conflicts before signing off.</p>
+          <p>Review each flagged issue and record a conclusion.</p>
         </div>
         <button
           className="button primary"
           onClick={() => {
-            if (independent[0]) select(independent[0].target, independent[0]);
+            if (critical[0]) select(critical[0].target, critical[0]);
+            else setView('return');
           }}
         >
-          {independent.length ? 'Review first finding' : 'Inspect the return'}
+          {critical.length ? `Review findings · ${critical.length}` : 'Inspect the return'}
           <ArrowRight size={15} />
         </button>
         <div className="focus-grid" aria-hidden="true">
@@ -316,11 +317,20 @@ function Metric({
   );
 }
 export function ReturnView() {
-  const { packet, state, version, working, select, command, readOnly, busy, open } = useWork();
+  const { packet, state, version, working, select, command, readOnly, busy, open, selectedRef } =
+    useWork();
   const [area, setArea] = useState('overview'),
     [query, setQuery] = useState(''),
     [page, setPage] = useState(1),
     [selected, setSelected] = useState<string[]>([]);
+  useEffect(() => {
+    const line = version.lines.find((item: Row) => item.key === selectedRef);
+    if (line) {
+      setArea(areaOf(line));
+      setQuery(line.key);
+      setPage(1);
+    }
+  }, [selectedRef, version.version]);
   const prior = packet.prior_years?.return_2024?.lines || {};
   let lines = version.lines.filter(
     (l: Row) =>

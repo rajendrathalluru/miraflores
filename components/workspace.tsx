@@ -66,6 +66,7 @@ export default function Workspace() {
     [view, setViewState] = useState('dashboard'),
     [versionKey, setVersionKey] = useState('working'),
     [selection, setSelection] = useState<Row | null>(null),
+    [navigationTrail, setNavigationTrail] = useState<Row[]>([]),
     [modal, setModal] = useState(''),
     [search, setSearch] = useState(''),
     [menu, setMenu] = useState(false),
@@ -103,6 +104,7 @@ export default function Workspace() {
       setSelection(null);
       setMenu(false);
       setDirty(false);
+      setNavigationTrail([]);
     }
     dataRef.current = d;
     setData(d);
@@ -249,6 +251,7 @@ export default function Workspace() {
   };
   const setView = (next: string) => {
     if (!confirmLeave()) return;
+    setNavigationTrail([]);
     setViewState(next);
     setMenu(false);
     updateUrl(next);
@@ -256,10 +259,30 @@ export default function Workspace() {
   };
   const select = (ref: string, finding?: Row, sourceVersion?: string) => {
     if (selection?.ref !== ref && !confirmLeave()) return;
-    if (sourceVersion) setVersionKey(sourceVersion);
+    if (selection && selection.ref !== ref) {
+      setNavigationTrail((trail) =>
+        [
+          ...trail,
+          { view, version: versionKey, selection, scroll: contentRef.current?.scrollTop || 0 },
+        ].slice(-20),
+      );
+    }
+    const nextVersion =
+      sourceVersion &&
+      !(
+        versionKey === 'working' &&
+        sourceVersion === dataRef.current?.packet.return_versions.at(-1)?.version
+      )
+        ? sourceVersion
+        : versionKey;
+    if (sourceVersion) {
+      setVersionKey(nextVersion);
+      setViewState('return');
+      contentRef.current?.scrollTo({ top: 0 });
+    }
     setModal('');
     setSelection({ ref, finding });
-    updateUrl(view, sourceVersion || versionKey, ref);
+    updateUrl(sourceVersion ? 'return' : view, nextVersion, ref);
   };
   const changeVersion = (next: string) => {
     if (!confirmLeave()) return;
@@ -390,6 +413,7 @@ export default function Workspace() {
   };
   const changeEngagement = async (id: string) => {
     if (!confirmLeave()) return;
+    setNavigationTrail([]);
     loadEpoch.current++;
     initialSelection.current = false;
     setSelection(null);
@@ -464,6 +488,7 @@ export default function Workspace() {
   };
   const openFindings = effectiveData.findings.filter((f: Row) => !s.findings?.[f.id]);
   const context = {
+    selectedRef: selection?.ref,
     data: effectiveData,
     packet: replay
       ? { ...p, documents: p.documents.filter((d: Row) => d.received_at <= replay) }
@@ -865,6 +890,24 @@ export default function Workspace() {
               <Inspector
                 key={`${data.actor.id}-${s.cycle}-${selection.ref}-${versionKey}`}
                 workspace={data}
+                backLabel={
+                  navigationTrail.length
+                    ? `Back to ${navigationTrail.at(-1)!.selection.ref}`
+                    : undefined
+                }
+                onBack={() => {
+                  if (!confirmLeave()) return;
+                  const previous = navigationTrail.at(-1);
+                  if (!previous) return;
+                  setNavigationTrail((trail) => trail.slice(0, -1));
+                  setViewState(previous.view);
+                  setVersionKey(previous.version);
+                  setSelection(previous.selection);
+                  updateUrl(previous.view, previous.version, previous.selection.ref);
+                  requestAnimationFrame(() =>
+                    contentRef.current?.scrollTo({ top: previous.scroll }),
+                  );
+                }}
                 version={versionKey}
                 onWorking={() => {
                   if (!confirmLeave()) return;
@@ -872,6 +915,7 @@ export default function Workspace() {
                   changeVersion('working');
                 }}
                 selection={selection}
+                onFinding={(finding) => select(finding.target, finding)}
                 onSelect={(r, v) => select(r, undefined, v)}
                 onClose={() => {
                   if (confirmLeave()) setSelection(null);

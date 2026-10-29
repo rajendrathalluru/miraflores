@@ -5099,3 +5099,39 @@ textarea::placeholder {
   font-size: 0.75rem;
   line-height: 1.5;
 }
+.inspector-back {
+  display: block;
+  width: 100%;
+  padding: 12px 22px;
+  text-align: left;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--teal-dark);
+  background: var(--teal-pale);
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.inspector-back:hover {
+  background: #dceee8;
+}
+.finding-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--teal-pale);
+  flex-shrink: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+}
+.finding-navigation > div {
+  display: flex;
+  gap: 6px;
+}
+.finding-navigation .button {
+  min-height: 32px;
+  padding: 6px 9px;
+}
